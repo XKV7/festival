@@ -393,8 +393,10 @@
     const MAX_BET = 500;
     const BET_STEP = 10;
 
-    // 연승 배율표 (6연승 이상은 x15 고정)
-    const STREAK_MULT = [1, 1.5, 2, 3, 5, 8, 15];
+    // 연승 배율표 (6연승 이상은 x5 고정)
+    // 다음 카드가 매번 1~13 균등이라 평균 적중률이 71%로 높다. 원안(1.5/2/3/5/8/15)은
+    // 최적 플레이 기대값이 베팅의 1.59배로 플레이어가 유리했음 → 하우스 엣지 약 11%가 되도록 조정.
+    const STREAK_MULT = [1, 1.2, 1.5, 2, 2.5, 3.5, 5];
     function multFor(streak) {
       return STREAK_MULT[Math.min(streak, STREAK_MULT.length - 1)];
     }

@@ -1,0 +1,9 @@
+# Netlify 정적 배포 설정: 빌드 없이 저장소 루트를 그대로 서빙
+[build]
+  publish = "."
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache"

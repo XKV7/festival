@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "accounts": {
+      ".read": true,
+      ".write": true
+    },
+    "indianPoker": { ".read": true, ".write": true },
+    "holdem": { ".read": true, ".write": true }
+  }
+}
