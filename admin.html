@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔧 관리자 - CASINO ROYALE</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="admin-header">
+    <div class="admin-title">🔧 관리자 패널</div>
+    <div>
+      <button class="btn btn-outline btn-small" onclick="window.location.href='index.html'">← 메인</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- 통계 -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num" id="statTotal">-</div>
+        <div class="stat-label">전체 계정</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" style="color:var(--green)" id="statIdle">-</div>
+        <div class="stat-label">🟢 대기</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" style="color:#f1c40f" id="statPlaying">-</div>
+        <div class="stat-label">🟡 사용중</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" style="color:var(--red)" id="statBusted">-</div>
+        <div class="stat-label">🔴 파산</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" style="color:var(--accent)" id="statSettled">-</div>
+        <div class="stat-label">✅ 정산</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" style="color:var(--gold)" id="statTotalChips">-</div>
+        <div class="stat-label">🪙 총 유통 칩</div>
+      </div>
+    </div>
+
+    <!-- 관리 버튼 -->
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+      <button class="btn btn-gold" onclick="handleGenerateAccounts()">📦 계정 60개 생성</button>
+      <button class="btn btn-red" onclick="handleResetAll()">🔄 전체 초기화 (칩 리셋)</button>
+      <button class="btn btn-outline" onclick="exportSettlement()">📋 정산표 내보내기</button>
+    </div>
+
+    <!-- 필터 -->
+    <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center;">
+      <span style="color:var(--text-dim); font-size:14px;">필터:</span>
+      <button class="btn btn-outline btn-small filter-btn active" data-filter="all" onclick="setFilter('all')">전체</button>
+      <button class="btn btn-outline btn-small filter-btn" data-filter="idle" onclick="setFilter('idle')">🟢 대기</button>
+      <button class="btn btn-outline btn-small filter-btn" data-filter="playing" onclick="setFilter('playing')">🟡 사용중</button>
+      <button class="btn btn-outline btn-small filter-btn" data-filter="busted" onclick="setFilter('busted')">🔴 파산</button>
+      <button class="btn btn-outline btn-small filter-btn" data-filter="settled" onclick="setFilter('settled')">✅ 정산</button>
+    </div>
+
+    <!-- 계정 테이블 -->
+    <div style="overflow-x:auto;">
+      <table class="account-table" id="accountTable">
+        <thead>
+          <tr>
+            <th>계정 ID</th>
+            <th>PIN</th>
+            <th>상태</th>
+            <th>칩</th>
+            <th>상품 등급</th>
+            <th>관리</th>
+          </tr>
+        </thead>
+        <tbody id="accountBody">
+          <tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-dim)">로딩 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script>
+    let currentFilter = 'all';
+    let allAccounts = {};
+
+    // 실시간 계정 데이터 리스너
+    db.ref('accounts').on('value', snap => {
+      allAccounts = snap.val() || {};
+      updateStats();
+      renderTable();
+    });
+
+    function updateStats() {
+      const accounts = Object.values(allAccounts);
+      const total = accounts.length;
+      const idle = accounts.filter(a => a.status === 'idle').length;
+      const playing = accounts.filter(a => a.status === 'playing').length;
+      const busted = accounts.filter(a => a.status === 'busted').length;
+      const settled = accounts.filter(a => a.status === 'settled').length;
+      const totalChips = accounts.reduce((sum, a) => sum + (a.chips || 0), 0);
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statIdle').textContent = idle;
+      document.getElementById('statPlaying').textContent = playing;
+      document.getElementById('statBusted').textContent = busted;
+      document.getElementById('statSettled').textContent = settled;
+      document.getElementById('statTotalChips').textContent = totalChips.toLocaleString();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('accountBody');
+      const entries = Object.entries(allAccounts)
+        .filter(([_, data]) => currentFilter === 'all' || data.status === currentFilter)
+        .sort(([a], [b]) => a.localeCompare(b));
+
+      if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-dim)">계정이 없습니다</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = entries.map(([id, data]) => {
+        const statusMap = {
+          idle: ['🟢 대기', 'status-idle'],
+          playing: ['🟡 사용중', 'status-playing'],
+          busted: ['🔴 파산', 'status-busted'],
+          settled: ['✅ 정산', 'status-settled']
+        };
+        const [statusText, statusClass] = statusMap[data.status] || ['⚪ 알수없음', ''];
+        const grade = getPrizeGrade(data.chips);
+
+        return `<tr>
+          <td><strong>${id}</strong></td>
+          <td style="color:var(--text-dim)">${data.pin}</td>
+          <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+          <td style="color:var(--gold); font-weight:700">${(data.chips || 0).toLocaleString()}</td>
+          <td>${grade.emoji} ${grade.grade}</td>
+          <td>
+            <button class="btn btn-outline btn-small" onclick="resetAccount('${id}')">초기화</button>
+            ${data.status === 'playing' || data.status === 'busted' ? 
+              `<button class="btn btn-small" style="background:var(--accent); color:#fff; margin-left:4px;" onclick="settleAccount('${id}', ${data.chips})">정산</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+      renderTable();
+    }
+
+    // 계정 생성
+    async function handleGenerateAccounts() {
+      if (!confirm('계정 60개를 생성합니다. 기존 계정은 유지됩니다.')) return;
+      await generateAccounts(60);
+      alert('✅ 계정 60개 생성 완료!');
+    }
+
+    // 전체 초기화
+    async function handleResetAll() {
+      if (!confirm('⚠️ 모든 계정의 칩을 1,000으로 초기화합니다. 진행할까요?')) return;
+      if (!confirm('정말로? 되돌릴 수 없습니다.')) return;
+
+      const updates = {};
+      Object.keys(allAccounts).forEach(id => {
+        updates[`accounts/${id}/chips`] = INITIAL_CHIPS;
+        updates[`accounts/${id}/status`] = 'idle';
+        updates[`accounts/${id}/loginTime`] = null;
+      });
+      await db.ref().update(updates);
+      alert('✅ 전체 초기화 완료');
+    }
+
+    // 개별 계정 초기화
+    async function resetAccount(id) {
+      if (!confirm(`${id} 계정을 초기화합니다 (칩 → 1,000, 상태 → 대기)`)) return;
+      await db.ref(`accounts/${id}`).update({
+        chips: INITIAL_CHIPS,
+        status: 'idle',
+        loginTime: null
+      });
+    }
+
+    // 정산 처리
+    async function settleAccount(id, chips) {
+      const grade = getPrizeGrade(chips);
+      if (!confirm(`${id} 정산\n\n칩: ${chips.toLocaleString()}\n등급: ${grade.emoji} ${grade.grade}\n상품: ${grade.prize}\n\n정산 처리할까요?`)) return;
+      await db.ref(`accounts/${id}`).update({
+        status: 'settled',
+        loginTime: null
+      });
+    }
+
+    // 정산표 내보내기
+    function exportSettlement() {
+      const lines = ['계정ID,PIN,상태,칩,등급,상품'];
+      Object.entries(allAccounts)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .forEach(([id, data]) => {
+          const grade = getPrizeGrade(data.chips);
+          lines.push(`${id},${data.pin},${data.status},${data.chips},${grade.grade},${grade.prize}`);
+        });
+
+      const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `casino_settlement_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    }
+  </script>
+
+  <style>
+    .filter-btn.active {
+      background: var(--gold) !important;
+      color: #000 !important;
+      border-color: var(--gold) !important;
+    }
+  </style>
+</body>
+</html>

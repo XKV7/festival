@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎰 CASINO ROYALE</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="login-wrapper">
+    <h1 class="login-title">🎰 CASINO ROYALE</h1>
+    <p class="login-subtitle">경문고 축제 카지노</p>
+
+    <div class="login-box">
+      <div class="input-group">
+        <label>계정 ID</label>
+        <select id="playerId">
+          <option value="">계정을 선택하세요</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>PIN</label>
+        <input type="password" id="pin" placeholder="4자리 PIN" maxlength="4" inputmode="numeric">
+      </div>
+      <button class="btn btn-gold" style="width:100%" onclick="handleLogin()">입장하기</button>
+      <p class="error-msg" id="errorMsg"></p>
+    </div>
+
+    <p style="margin-top:30px">
+      <a href="admin.html" style="color:var(--text-dim); font-size:13px; text-decoration:none;">🔧 관리자 페이지</a>
+    </p>
+  </div>
+
+  <!-- 파산 오버레이 -->
+  <div class="busted-overlay" id="bustedOverlay">
+    <div class="busted-icon">💀</div>
+    <div class="busted-text">P A S A N</div>
+    <div class="busted-sub">칩을 모두 잃었습니다. 접수 데스크에서 카드를 반납해주세요.</div>
+    <button class="btn btn-outline" style="margin-top:30px" onclick="window.location.reload()">확인</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script>
+    // 계정 목록 불러오기
+    async function loadAccounts() {
+      const select = document.getElementById('playerId');
+      const snap = await db.ref('accounts').orderByKey().once('value');
+      const accounts = snap.val();
+      if (!accounts) {
+        select.innerHTML = '<option value="">계정이 없습니다 (관리자 페이지에서 생성)</option>';
+        return;
+      }
+      select.innerHTML = '<option value="">계정을 선택하세요</option>';
+      Object.entries(accounts).forEach(([id, data]) => {
+        const statusIcon = { idle: '🟢', playing: '🟡', busted: '🔴', settled: '✅' }[data.status] || '⚪';
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = `${statusIcon} ${id}`;
+        if (data.status !== 'idle') opt.disabled = true;
+        select.appendChild(opt);
+      });
+    }
+
+    async function handleLogin() {
+      const playerId = document.getElementById('playerId').value;
+      const pin = document.getElementById('pin').value;
+      const errorEl = document.getElementById('errorMsg');
+
+      if (!playerId || !pin) {
+        errorEl.textContent = '계정과 PIN을 입력해주세요';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const result = await login(playerId, pin);
+      if (result.success) {
+        window.location.href = 'lobby.html';
+      } else {
+        errorEl.textContent = result.error;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    // PIN 입력 후 엔터
+    document.getElementById('pin').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    loadAccounts();
+  </script>
+</body>
+</html>

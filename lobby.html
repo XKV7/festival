@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎰 로비 - CASINO ROYALE</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="lobby-header">
+      <h1 class="lobby-title">🎰 CASINO ROYALE</h1>
+      <div class="player-info">
+        <div class="chip-display">
+          <span class="chip-icon">🪙</span>
+          <span class="chip-amount" id="chipCount">---</span>
+        </div>
+        <span class="player-id" id="playerIdDisplay"></span>
+        <button class="btn btn-outline btn-small" onclick="handleLogout()">나가기</button>
+      </div>
+    </div>
+
+    <div class="game-grid">
+      <a class="game-card" href="games/slots.html">
+        <div class="game-icon">🎰</div>
+        <div class="game-name">슬롯머신</div>
+        <div class="game-desc">릴을 돌려 조합을 맞춰라!</div>
+        <div class="game-bet">베팅: 10~200</div>
+      </a>
+
+      <a class="game-card" href="games/highlow.html">
+        <div class="game-icon">🃏</div>
+        <div class="game-name">하이로우</div>
+        <div class="game-desc">다음 카드는 높을까 낮을까?</div>
+        <div class="game-bet">베팅: 10~500 | 연승 보너스</div>
+      </a>
+
+      <a class="game-card" href="games/roulette.html">
+        <div class="game-icon">🎡</div>
+        <div class="game-name">룰렛</div>
+        <div class="game-desc">번호, 색상, 홀짝에 베팅!</div>
+        <div class="game-bet">베팅: 10~500</div>
+      </a>
+
+      <a class="game-card" href="games/blackjack.html">
+        <div class="game-icon">🂡</div>
+        <div class="game-name">블랙잭</div>
+        <div class="game-desc">딜러를 이겨라! 21에 가까운 쪽이 승리</div>
+        <div class="game-bet">베팅: 20~500</div>
+      </a>
+
+      <a class="game-card" href="games/baccarat.html">
+        <div class="game-icon">💎</div>
+        <div class="game-name">바카라</div>
+        <div class="game-desc">플레이어 vs 뱅커, 9에 가까운 쪽이 승리</div>
+        <div class="game-bet">베팅: 20~500</div>
+      </a>
+
+      <a class="game-card" href="games/sicbo.html">
+        <div class="game-icon">🎲</div>
+        <div class="game-name">식보</div>
+        <div class="game-desc">주사위 3개의 합을 맞춰라!</div>
+        <div class="game-bet">베팅: 10~500</div>
+      </a>
+
+      <a class="game-card" href="games/indian-poker.html">
+        <div class="game-icon">🤠</div>
+        <div class="game-name">인디언 포커</div>
+        <div class="game-desc">상대 카드만 보이는 심리전! (2인)</div>
+        <div class="game-bet">베팅: 50~500 | PvP</div>
+      </a>
+
+      <a class="game-card" href="games/holdem.html">
+        <div class="game-icon">♠️</div>
+        <div class="game-name">텍사스 홀덤</div>
+        <div class="game-desc">포커의 꽃! (2~4인)</div>
+        <div class="game-bet">블라인드: 10/20 | PvP</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- 파산 오버레이 -->
+  <div class="busted-overlay" id="bustedOverlay">
+    <div class="busted-icon">💀</div>
+    <div class="busted-text">파 산</div>
+    <div class="busted-sub">칩을 모두 잃었습니다.<br>접수 데스크에서 카드를 반납해주세요.</div>
+    <button class="btn btn-outline" style="margin-top:30px" onclick="handleLogout()">확인</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script>
+    const playerId = getCurrentPlayer();
+    if (!playerId) {
+      window.location.href = 'index.html';
+    }
+
+    document.getElementById('playerIdDisplay').textContent = playerId;
+
+    // 칩 실시간 표시
+    onChipsChange(chips => {
+      document.getElementById('chipCount').textContent = chips.toLocaleString();
+      if (chips <= 0) {
+        document.getElementById('bustedOverlay').classList.add('active');
+      }
+    });
+
+    async function handleLogout() {
+      await logout();
+      window.location.href = 'index.html';
+    }
+
+    // 브라우저 닫을 때 자동 로그아웃
+    window.addEventListener('beforeunload', () => {
+      const id = getCurrentPlayer();
+      if (id) {
+        // sendBeacon으로 비동기 로그아웃 (페이지 닫혀도 전송됨)
+        const url = db.ref(`accounts/${id}`).toString() + '.json';
+        navigator.sendBeacon(url, JSON.stringify({ status: 'idle', loginTime: null }));
+      }
+    });
+  </script>
+</body>
+</html>
