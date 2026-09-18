@@ -1,0 +1,126 @@
+# 계정 생성 워크플로 (수동 실행)
+# Actions 탭 → "Generate accounts" → Run workflow
+#   database_url : 비워두면 프로젝트 ID로 리전별 주소를 자동 탐색
+#   count        : 만들 계정 수 (기본 60)
+#   mode         : create-if-empty (계정이 하나도 없을 때만 생성) | add-missing (없는 번호만 추가) | reset-all (전부 새로 생성, 기존 삭제)
+# 결과: 요약 출력 + accounts.csv 아티팩트 (계정ID, PIN)
+name: Generate accounts
+
+on:
+  workflow_dispatch:
+    inputs:
+      database_url:
+        description: "Realtime Database URL (비우면 자동 탐색)"
+        required: false
+        default: ""
+      count:
+        description: "계정 수"
+        required: false
+        default: "60"
+      mode:
+        description: "create-if-empty | add-missing | reset-all"
+        required: false
+        default: "create-if-empty"
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate accounts via Realtime Database REST
+        env:
+          DB_URL_INPUT: ${{ github.event.inputs.database_url }}
+          COUNT: ${{ github.event.inputs.count }}
+          MODE: ${{ github.event.inputs.mode }}
+        run: |
+          node - <<'JS'
+          const fs = require('fs');
+          const cfgSrc = fs.readFileSync('js/firebase-config.js', 'utf8');
+          const projectId = (cfgSrc.match(/projectId:\s*"([^"]+)"/) || [])[1];
+          const count = parseInt(process.env.COUNT || '60', 10);
+          const mode = process.env.MODE || 'create-if-empty';
+          const INITIAL_CHIPS = 1000;
+
+          async function getJson(url) {
+            const r = await fetch(url);
+            const text = await r.text();
+            let body = null; try { body = JSON.parse(text); } catch {}
+            return { ok: r.ok, status: r.status, body, text };
+          }
+          async function probe() {
+            if (process.env.DB_URL_INPUT) return process.env.DB_URL_INPUT.replace(/\/$/, '');
+            const cands = [
+              `https://${projectId}-default-rtdb.firebaseio.com`,
+              `https://${projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`,
+              `https://${projectId}-default-rtdb.europe-west1.firebasedatabase.app`,
+            ];
+            for (const c of cands) {
+              try {
+                const r = await getJson(c + '/.json?shallow=true');
+                console.log('probe', c, '->', r.status, r.text.slice(0, 80));
+                if (r.ok) return c;
+              } catch (e) { console.log('probe', c, '-> error', e.message); }
+            }
+            return null;
+          }
+
+          (async () => {
+            const base = await probe();
+            if (!base) {
+              console.log('::error::Realtime Database 를 찾지 못했습니다. Firebase 콘솔에서 Realtime Database 를 만들고 규칙을 게시했는지 확인하거나 database_url 입력값을 지정하세요.');
+              process.exit(1);
+            }
+            console.log('DATABASE_URL=' + base);
+            fs.writeFileSync('database_url.txt', base);
+
+            const cur = await getJson(base + '/accounts.json');
+            if (!cur.ok) {
+              console.log('::error::accounts 읽기 실패 (' + cur.status + '): ' + cur.text.slice(0, 200) + ' — DB 규칙이 database.rules.json 대로 게시됐는지 확인하세요.');
+              process.exit(1);
+            }
+            const existing = cur.body || {};
+            const existingCount = Object.keys(existing).length;
+            console.log('existing accounts:', existingCount);
+
+            if (mode === 'create-if-empty' && existingCount > 0) {
+              console.log('::warning::이미 계정이 ' + existingCount + '개 있어 생성을 건너뜁니다. 추가하려면 mode=add-missing, 전부 새로 만들려면 mode=reset-all 로 실행하세요.');
+            } else {
+              const updates = {};
+              for (let i = 1; i <= count; i++) {
+                const id = 'PLAYER-' + String(i).padStart(3, '0');
+                if (mode === 'add-missing' && existing[id]) continue;
+                const pin = String(Math.floor(1000 + Math.random() * 9000));
+                updates[id] = { pin, chips: INITIAL_CHIPS, status: 'idle', loginTime: null, gameHistory: [] };
+              }
+              if (mode === 'reset-all') {
+                const r = await fetch(base + '/accounts.json', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+                if (!r.ok) { console.log('::error::쓰기 실패 ' + r.status + ' ' + (await r.text()).slice(0, 200)); process.exit(1); }
+              } else if (Object.keys(updates).length) {
+                const r = await fetch(base + '/accounts.json', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+                if (!r.ok) { console.log('::error::쓰기 실패 ' + r.status + ' ' + (await r.text()).slice(0, 200)); process.exit(1); }
+              }
+              console.log('written:', Object.keys(updates).length);
+            }
+
+            const fin = await getJson(base + '/accounts.json');
+            const all = fin.body || {};
+            const ids = Object.keys(all).sort();
+            const lines = ['계정ID,PIN,칩,상태'];
+            ids.forEach(id => lines.push(`${id},${all[id].pin},${all[id].chips},${all[id].status}`));
+            fs.writeFileSync('accounts.csv', '﻿' + lines.join('\n'));
+            console.log('total accounts now:', ids.length);
+            console.log(lines.slice(0, 6).join('\n') + (ids.length > 5 ? '\n...' : ''));
+          })().catch(e => { console.log('::error::' + e.message); process.exit(1); });
+          JS
+
+      - name: Upload CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: accounts-csv
+          path: |
+            accounts.csv
+            database_url.txt

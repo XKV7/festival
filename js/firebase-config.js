@@ -1,12 +1,12 @@
 // ⚠️ 여기에 Firebase 콘솔에서 복사한 config 붙여넣기
 const firebaseConfig = {
-  apiKey: "여기에-붙여넣기",
-  authDomain: "여기에-붙여넣기",
+  apiKey: "AIzaSyAvWfY9Q8fsTa4UFyWFMNs1OrACPpFbG1w",
+  authDomain: "festival-b3bfa.firebaseapp.com",
   databaseURL: "여기에-붙여넣기",
-  projectId: "여기에-붙여넣기",
-  storageBucket: "여기에-붙여넣기",
-  messagingSenderId: "여기에-붙여넣기",
-  appId: "여기에-붙여넣기"
+  projectId: "festival-b3bfa",
+  storageBucket: "festival-b3bfa.firebasestorage.app",
+  messagingSenderId: "621767691851",
+  appId: "1:621767691851:web:13a8bd5a6c1e45c675c7ce"
 };
 
 firebase.initializeApp(firebaseConfig);
