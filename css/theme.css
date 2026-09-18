@@ -363,3 +363,9 @@ body.v2::before {
 @media (max-width: 600px) {
   .gtop-logo { display: none; }
 }
+
+.dealer-pill {
+  font-size: 12px; font-weight: 700; color: var(--gold-light);
+  background: rgba(212,168,67,0.12); border: 1px solid rgba(212,168,67,0.4);
+  border-radius: 20px; padding: 5px 11px; white-space: nowrap;
+}

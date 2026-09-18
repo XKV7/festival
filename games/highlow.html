@@ -272,6 +272,7 @@
       <div class="gtop-left">
         <a href="../lobby.html" class="back-btn">← 로비</a>
         <span class="gtop-logo" id="gtopLogo">🎰 CASINO ROYALE</span>
+        <span class="dealer-pill" id="gtopDealer">🤵 딜러</span>
       </div>
       <div class="gtop-right">
         <div class="chip-display">
@@ -285,7 +286,7 @@
 
     <div class="game-area">
       <div class="hl-title">🃏 HIGH · LOW</div>
-      <div class="hl-sub">베팅 10 ~ 500 · 다음 카드가 높을까 낮을까? · 같은 숫자는 패배</div>
+      <div class="hl-sub">베팅 10 ~ 500 · 다음 카드가 높을까 낮을까? · 같은 숫자는 나오지 않음</div>
 
       <div class="hl-status">
         <div class="hl-stat"><div class="label">베팅</div><div class="value" id="statBet">-</div></div>
@@ -354,7 +355,7 @@
       <div class="mult-table">
         <h3>📈 연승 배율표 (베팅액 × 배율)</h3>
         <div class="mult-grid" id="multGrid"></div>
-        <div class="mult-note">맞추면 연승 +1 · 틀리거나 같은 숫자면 베팅액 전부 손실 · STOP으로 언제든 확정</div>
+        <div class="mult-note">맞추면 연승 +1 · 틀리면 베팅액 전부 손실 · STOP으로 언제든 확정 (1연승은 본전)</div>
       </div>
     </div>
   </div>
@@ -380,6 +381,7 @@
     buildTicker(document.getElementById('ticker'));
     document.getElementById('gtopLogo').textContent = '🎰 ' + SITE.name;
     document.getElementById('gtopPid').textContent = getCurrentPlayer() || '';
+    document.getElementById('gtopDealer').textContent = '🤵 딜러 ' + SITE.dealer;
     onChipsChange(c => { document.getElementById('gtopGrade').textContent = getPrizeGrade(c || 0).emoji; });
 
     let currentChips = 0;
@@ -408,10 +410,11 @@
     const MAX_BET = 500;
     const BET_STEP = 10;
 
-    // 연승 배율표 (6연승 이상은 x5 고정)
-    // 다음 카드가 매번 1~13 균등이라 평균 적중률이 71%로 높다. 원안(1.5/2/3/5/8/15)은
-    // 최적 플레이 기대값이 베팅의 1.59배로 플레이어가 유리했음 → 하우스 엣지 약 11%가 되도록 조정.
-    const STREAK_MULT = [1, 1.2, 1.5, 2, 2.5, 3.5, 5];
+    // 연승 배율표 (6연승 이상은 x3.5 고정)
+    // 다음 카드는 현재 카드와 다른 숫자에서 뽑히므로(같은 숫자 없음) 평균 적중률이 77%,
+    // A/K가 보이면 100% 적중이다. 그래서 1연승은 x1.0(본전)이고 2연승부터 이익.
+    // 최적 플레이 기대값 0.847 (하우스 엣지 약 15%).
+    const STREAK_MULT = [1, 1.0, 1.25, 1.6, 2, 2.6, 3.5];
     function multFor(streak) {
       return STREAK_MULT[Math.min(streak, STREAK_MULT.length - 1)];
     }
@@ -423,9 +426,11 @@
       { s: '♦', red: true },
       { s: '♣', red: false }
     ];
-    function randomCard() {
+    function randomCard(excludeRank) {
+      let rank;
+      do { rank = 1 + Math.floor(Math.random() * 13); } while (rank === excludeRank);
       return {
-        rank: 1 + Math.floor(Math.random() * 13),
+        rank,
         suit: SUITS[Math.floor(Math.random() * SUITS.length)]
       };
     }
@@ -573,7 +578,7 @@
       setPhase('busy');
       clearGlow();
 
-      const next = randomCard();
+      const next = randomCard(currentCard.rank);   // 같은 숫자는 나오지 않음
       renderFront($('nextFront'), next);
       playSfx('card');
       setFlipped($('nextCard'), true);
@@ -581,7 +586,6 @@
 
       const correct = (dir === 'high' && next.rank > currentCard.rank) ||
                       (dir === 'low'  && next.rank < currentCard.rank);
-      const tie = next.rank === currentCard.rank;
 
       if (correct) {
         streak++;
@@ -615,9 +619,7 @@
         historyCards.push(next);
         renderHistory();
         playSfx('lose');
-        const why = tie
-          ? `같은 숫자 (${rankLabel(next.rank)}) · 무조건 패배`
-          : `${rankLabel(currentCard.rank)} → ${rankLabel(next.rank)} · ${dir === 'high' ? 'HIGH' : 'LOW'} 실패`;
+        const why = `${rankLabel(currentCard.rank)} → ${rankLabel(next.rank)} · ${dir === 'high' ? 'HIGH' : 'LOW'} 실패`;
         showResult('❌ 실패...', `${why} · -${bet.toLocaleString()} 칩`, 'result-lose');
         streak = 0;
         await settle(-bet);

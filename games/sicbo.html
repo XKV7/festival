@@ -255,6 +255,7 @@
       <div class="gtop-left">
         <a href="../lobby.html" class="back-btn">← 로비</a>
         <span class="gtop-logo" id="gtopLogo">🎰 CASINO ROYALE</span>
+        <span class="dealer-pill" id="gtopDealer">🤵 딜러</span>
       </div>
       <div class="gtop-right">
         <div class="chip-display">
@@ -313,10 +314,10 @@
         <div class="paytable-grid">
           <div class="pay-row" data-key="bigsmall"><span>대 (11~17) / 소 (4~10)</span><span class="pay-mult">x2</span></div>
           <div class="pay-row" data-key="parity"><span>홀 / 짝</span><span class="pay-mult">x2</span></div>
-          <div class="pay-row" data-key="sum"><span>특정 합 (4~17)</span><span class="pay-mult">x6 ~ x60</span></div>
-          <div class="pay-row" data-key="double"><span>더블 (특정 숫자 2개 이상)</span><span class="pay-mult">x10</span></div>
+          <div class="pay-row" data-key="sum"><span>특정 합 (4~17)</span><span class="pay-mult">x6 ~ x50</span></div>
+          <div class="pay-row" data-key="double"><span>더블 (특정 숫자 2개 이상)</span><span class="pay-mult">x8</span></div>
           <div class="pay-row" data-key="triple"><span>트리플 (특정 숫자 3개)</span><span class="pay-mult">x150</span></div>
-          <div class="pay-row" data-key="anytriple"><span>애니 트리플</span><span class="pay-mult">x30</span></div>
+          <div class="pay-row" data-key="anytriple"><span>애니 트리플</span><span class="pay-mult">x24</span></div>
           <div class="pay-row" data-key="single"><span>싱글 (특정 숫자 1 / 2 / 3개)</span><span class="pay-mult">x2 / x3 / x4</span></div>
         </div>
         <p>대/소·홀/짝은 트리플이 나오면 패배 · 싱글은 해당 숫자 개수만큼 원금 배로 지급 (1개 = 1:1, 2개 = 2:1, 3개 = 3:1)</p>
@@ -345,6 +346,7 @@
     buildTicker(document.getElementById('ticker'));
     document.getElementById('gtopLogo').textContent = '🎰 ' + SITE.name;
     document.getElementById('gtopPid').textContent = getCurrentPlayer() || '';
+    document.getElementById('gtopDealer').textContent = '🤵 딜러 ' + SITE.dealer;
     onChipsChange(c => { document.getElementById('gtopGrade').textContent = getPrizeGrade(c || 0).emoji; });
 
     let currentChips = 0;
@@ -371,9 +373,10 @@
     // ============ 게임 설정 ============
     const MIN_BET = 10;
     const MAX_BET = 500;
+    // 합계 배당 (마카오식: 원안 60/30/18 보다 낮음)
     const SUM_PAYOUTS = {
-      4: 60, 5: 30, 6: 18, 7: 12, 8: 8, 9: 6, 10: 6,
-      11: 6, 12: 6, 13: 8, 14: 12, 15: 18, 16: 30, 17: 60
+      4: 50, 5: 18, 6: 14, 7: 12, 8: 8, 9: 6, 10: 6,
+      11: 6, 12: 6, 13: 8, 14: 12, 15: 14, 16: 18, 17: 50
     };
     const DICE_CHAR = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
     const PIPS = {
@@ -391,10 +394,10 @@
     BET_DEFS.big   = { type: 'bigsmall', label: '대', payout: d => (!isTriple(d) && sumOf(d) >= 11) ? 2 : 0 };
     BET_DEFS.odd   = { type: 'parity',   label: '홀', payout: d => (!isTriple(d) && sumOf(d) % 2 === 1) ? 2 : 0 };
     BET_DEFS.even  = { type: 'parity',   label: '짝', payout: d => (!isTriple(d) && sumOf(d) % 2 === 0) ? 2 : 0 };
-    BET_DEFS.anytriple = { type: 'anytriple', label: '애니 트리플', payout: d => isTriple(d) ? 30 : 0 };
+    BET_DEFS.anytriple = { type: 'anytriple', label: '애니 트리플', payout: d => isTriple(d) ? 24 : 0 };
     for (let n = 1; n <= 6; n++) {
       BET_DEFS['triple' + n] = { type: 'triple', label: `트리플 ${n}`, payout: d => counts(d)[n] === 3 ? 150 : 0 };
-      BET_DEFS['double' + n] = { type: 'double', label: `더블 ${n}`, payout: d => counts(d)[n] >= 2 ? 10 : 0 };
+      BET_DEFS['double' + n] = { type: 'double', label: `더블 ${n}`, payout: d => counts(d)[n] >= 2 ? 8 : 0 };
       BET_DEFS['single' + n] = { type: 'single', label: `싱글 ${n}`, payout: d => { const k = counts(d)[n]; return k > 0 ? k + 1 : 0; } };
     }
     for (let s = 4; s <= 17; s++) {
@@ -458,7 +461,7 @@
       board.appendChild(row('', [
         makeSpot('small', '<span>소 SMALL</span><span class="pay">4 ~ 10 · x2</span>', 'small-spot'),
         makeSpot('odd', '<span>홀 ODD</span><span class="pay">x2</span>', 'odd-spot'),
-        makeSpot('anytriple', '<span>ANY TRIPLE</span><span class="pay">x30</span>', 'anytriple'),
+        makeSpot('anytriple', '<span>ANY TRIPLE</span><span class="pay">x24</span>', 'anytriple'),
         makeSpot('even', '<span>짝 EVEN</span><span class="pay">x2</span>', 'even-spot'),
         makeSpot('big', '<span>대 BIG</span><span class="pay">11 ~ 17 · x2</span>', 'big-spot')
       ]));
@@ -467,7 +470,7 @@
         makeSpot('triple' + n, `<span class="dice">${DICE_CHAR[n].repeat(3)}</span><span class="pay">x150</span>`, 'wide tall'))));
       // 3행: 더블
       board.appendChild(row('DOUBLE', [1, 2, 3, 4, 5, 6].map(n =>
-        makeSpot('double' + n, `<span class="dice">${DICE_CHAR[n].repeat(2)}</span><span class="pay">x10</span>`, 'wide tall'))));
+        makeSpot('double' + n, `<span class="dice">${DICE_CHAR[n].repeat(2)}</span><span class="pay">x8</span>`, 'wide tall'))));
       // 4행: 합계
       const sums = [];
       for (let s = 4; s <= 17; s++) sums.push(makeSpot('sum' + s, `<span class="n">${s}</span><span class="pay">x${SUM_PAYOUTS[s]}</span>`, 'sum-spot'));

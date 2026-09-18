@@ -30,7 +30,7 @@
       box-shadow: var(--neon-glow), inset 0 0 40px rgba(0,0,0,0.5);
     }
     .bj-table::before {
-      content: 'BLACKJACK PAYS 3 TO 2 · DEALER STANDS ON 17';
+      content: 'BLACKJACK PAYS 6 TO 5 · DEALER HITS SOFT 17';
       position: absolute;
       left: 0; right: 0;
       top: 50%;
@@ -215,6 +215,7 @@
       <div class="gtop-left">
         <a href="../lobby.html" class="back-btn">← 로비</a>
         <span class="gtop-logo" id="gtopLogo">🎰 CASINO ROYALE</span>
+        <span class="dealer-pill" id="gtopDealer">🤵 딜러</span>
       </div>
       <div class="gtop-right">
         <div class="chip-display">
@@ -228,12 +229,12 @@
 
     <div class="game-area">
       <div class="bj-title">🂡 BLACKJACK</div>
-      <div class="bj-sub">베팅 20 ~ 500 · 21에 가까운 쪽이 승리 · 딜러는 17 이상 스탠드</div>
+      <div class="bj-sub">베팅 20 ~ 500 · 21에 가까운 쪽이 승리 · 딜러 임태현은 소프트 17에서 HIT</div>
 
       <div class="bj-table">
         <div class="hand-area dealer" id="dealerArea">
           <div class="hand-header">
-            <span class="hand-name">DEALER</span>
+            <span class="hand-name">🤵 임태현</span>
             <span class="hand-total" id="dealerTotal">-</span>
           </div>
           <div class="hand-cards" id="dealerCards"></div>
@@ -250,7 +251,7 @@
 
       <div class="bj-result">
         <div class="result-msg" id="resultMsg">베팅액을 정하고 DEAL</div>
-        <div class="result-sub" id="resultSub">블랙잭 x2.5 · 승리 x2 · 무승부 반환</div>
+        <div class="result-sub" id="resultSub">블랙잭 x2.2 · 승리 x2 · 무승부 반환</div>
       </div>
 
       <!-- 베팅 단계 -->
@@ -283,7 +284,7 @@
       <div class="rules">
         <h3>📋 배당 & 룰</h3>
         <div class="rules-grid">
-          <div class="rule-row" data-key="blackjack"><span>블랙잭 (첫 2장 21)</span><span class="pay">x2.5</span></div>
+          <div class="rule-row" data-key="blackjack"><span>블랙잭 (첫 2장 21)</span><span class="pay">x2.2</span></div>
           <div class="rule-row" data-key="win"><span>승리</span><span class="pay">x2</span></div>
           <div class="rule-row" data-key="push"><span>무승부 (Push)</span><span class="pay">반환</span></div>
           <div class="rule-row" data-key="lose"><span>패배 / 버스트</span><span class="pay">-베팅</span></div>
@@ -315,6 +316,7 @@
     buildTicker(document.getElementById('ticker'));
     document.getElementById('gtopLogo').textContent = '🎰 ' + SITE.name;
     document.getElementById('gtopPid').textContent = getCurrentPlayer() || '';
+    document.getElementById('gtopDealer').textContent = '🤵 딜러 ' + SITE.dealer;
     onChipsChange(c => { document.getElementById('gtopGrade').textContent = getPrizeGrade(c || 0).emoji; });
 
     let currentChips = 0;
@@ -344,7 +346,7 @@
     const BET_STEP = 10;
     const DECKS = 6;              // 6덱 슈
     const RESHUFFLE_AT = 52;      // 남은 카드가 이보다 적으면 새로 섞음
-    const BLACKJACK_PAY = 1.5;    // 순이익 배수 (총 x2.5)
+    const BLACKJACK_PAY = 1.2;    // 순이익 배수 (총 x2.2, 6:5 규칙)
 
     const SUITS = [
       { s: '♠', red: false }, { s: '♥', red: true },
@@ -551,7 +553,7 @@
         await wait(500);
         if (pBJ && dBJ) return finish('push', '둘 다 블랙잭!');
         if (pBJ) return finish('blackjack', '블랙잭!');
-        return finish('lose', '딜러 블랙잭...');
+        return finish('lose', '임태현 블랙잭...');
       }
 
       setPhase('play');
@@ -602,12 +604,12 @@
       setPhase('busy');
       $('playerArea').classList.remove('active');
       $('dealerArea').classList.add('active');
-      showResult('딜러 차례', '딜러는 16 이하 HIT · 17 이상 STAND', '');
+      showResult('임태현 차례', '16 이하 HIT · 소프트 17 HIT · 하드 17 이상 STAND', '');
       await wait(300);
       revealDealer();
       await wait(600);
 
-      while (handTotal(dealer).total < 17) {
+      while (handTotal(dealer).total < 17 || (handTotal(dealer).total === 17 && handTotal(dealer).soft)) {   // H17: 소프트 17도 HIT
         await dealTo('dealer');
         await wait(350);
       }
@@ -615,7 +617,7 @@
 
       const p = handTotal(player).total;
       const d = handTotal(dealer).total;
-      if (d > 21) return finish('win', `딜러 버스트! (${d})`);
+      if (d > 21) return finish('win', `임태현 버스트! (${d})`);
       if (p > d) return finish('win', `${p} vs ${d}`);
       if (p < d) return finish('lose', `${p} vs ${d}`);
       return finish('push', `${p} vs ${d} · 무승부`);
