@@ -67,9 +67,18 @@
     .hand-total.natural { background: var(--gold-light); color: #000; border-color: var(--gold-light); }
     .hand-cards {
       display: flex;
+      flex-wrap: wrap;
       justify-content: center;
       gap: 8px;
       min-height: 126px;
+    }
+    /* 3번째 카드: 아래 줄에 가로로 눕혀서 */
+    .third-slot {
+      flex-basis: 100%;
+      display: flex;
+      justify-content: center;
+      height: 96px;
+      margin-top: 4px;
     }
     .bc-vs {
       align-self: center;
@@ -82,7 +91,7 @@
 
     /* ============ 트럼프 카드 ============ */
     .card-scene { width: 90px; height: 126px; perspective: 800px; }
-    .card-scene.third { transform: rotate(90deg); margin: 0 18px; }
+    .card-scene.third { transform: rotate(90deg); margin-top: -15px; }
     .card {
       position: relative; width: 100%; height: 100%;
       transform-style: preserve-3d;
@@ -262,7 +271,8 @@
 
     @media (max-width: 560px) {
       .card-scene { width: 64px; height: 90px; }
-      .card-scene.third { margin: 0 12px; }
+      .third-slot { height: 70px; }
+      .card-scene.third { margin-top: -10px; }
       .card-front .center { font-size: 30px; }
       .card-front .corner { font-size: 11px; }
       .hand-cards { min-height: 92px; gap: 5px; }
@@ -485,7 +495,14 @@
       const third = hand.length === 3;
       const box = $(side === 'player' ? 'playerCards' : 'bankerCards');
       const scene = cardElement(card, third);
-      box.appendChild(scene);
+      if (third) {
+        const slot = document.createElement('div');
+        slot.className = 'third-slot';
+        slot.appendChild(scene);
+        box.appendChild(slot);
+      } else {
+        box.appendChild(scene);
+      }
       $('playerHand').classList.toggle('active', side === 'player');
       $('bankerHand').classList.toggle('active', side === 'banker');
       playSfx('card');
