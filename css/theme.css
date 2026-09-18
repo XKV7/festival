@@ -319,3 +319,47 @@ body.v2::before {
   .topnav .nav-links { order: 3; width: 100%; justify-content: center; }
   .ticker { font-size: 13px; }
 }
+
+/* ---------- 게임 페이지 공통 (같은 톤) ---------- */
+.v2 .game-wrapper { position: relative; z-index: 1; }
+.gtop {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: rgba(19,26,43,0.9);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 10px 16px;
+  margin-bottom: 10px;
+  backdrop-filter: blur(8px);
+}
+.gtop-left, .gtop-right { display: flex; align-items: center; gap: 12px; }
+.gtop .back-btn {
+  color: var(--text); font-size: 13px; font-weight: 700;
+  background: rgba(255,255,255,0.06); border-radius: 8px; padding: 7px 12px;
+}
+.gtop .back-btn:hover { background: rgba(212,168,67,0.2); color: var(--gold-light); }
+.gtop-logo {
+  font-size: 15px; font-weight: 900; letter-spacing: 3px;
+  background: linear-gradient(90deg, var(--gold-light), var(--gold), var(--gold-dark));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+.gtop .chip-display { padding: 6px 14px; }
+.gtop .chip-display .chip-amount { font-size: 18px; }
+.gtop .player-pill { padding: 6px 12px; font-size: 12px; }
+.ticker.slim {
+  font-size: 12px; padding: 5px 0; letter-spacing: 0.5px;
+  border: 1px solid rgba(255,59,92,0.45); border-image: none; border-radius: 10px;
+  margin-bottom: 16px;
+  box-shadow: 0 0 12px rgba(255,59,92,0.25), inset 0 0 20px rgba(0,0,0,0.6);
+}
+.ticker.slim::before, .ticker.slim::after { width: 30px; }
+.ticker.slim .tk-sep { margin: 0 14px; }
+.v2 .game-area {
+  position: relative; z-index: 1;
+  background: rgba(26,35,50,0.92);
+  border: 1px solid rgba(212,168,67,0.22);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), var(--neon-glow);
+}
+@media (max-width: 600px) {
+  .gtop-logo { display: none; }
+}

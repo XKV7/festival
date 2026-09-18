@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎰 슬롯머신 - CASINO ROYALE</title>
   <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/theme.css">
   <style>
     /* ============ 슬롯머신 전용 스타일 ============ */
     .slot-title {
@@ -222,15 +223,22 @@
     }
   </style>
 </head>
-<body>
+<body class="v2">
   <div class="game-wrapper">
-    <div class="game-topbar">
-      <a href="../lobby.html" class="back-btn">← 로비로</a>
-      <div class="chip-display">
-        <span class="chip-icon">🪙</span>
-        <span class="chip-amount" id="chipCount">---</span>
+    <div class="game-topbar gtop">
+      <div class="gtop-left">
+        <a href="../lobby.html" class="back-btn">← 로비</a>
+        <span class="gtop-logo" id="gtopLogo">🎰 CASINO ROYALE</span>
+      </div>
+      <div class="gtop-right">
+        <div class="chip-display">
+          <span class="chip-icon">🪙</span>
+          <span class="chip-amount" id="chipCount">---</span>
+        </div>
+        <div class="player-pill"><span class="grade" id="gtopGrade">🙂</span><span class="pid" id="gtopPid"></span></div>
       </div>
     </div>
+    <div class="ticker slim" id="ticker"></div>
 
     <div class="game-area">
       <div class="slot-title">🎰 SLOT MACHINE</div>
@@ -284,9 +292,16 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
+  <script src="../js/site-config.js"></script>
   <script>
     // 로그인 체크
     if (!getCurrentPlayer()) window.location.href = '../index.html';
+
+    // 공통 상단바 (로고 · 동아리 배너 · 내 등급)
+    buildTicker(document.getElementById('ticker'));
+    document.getElementById('gtopLogo').textContent = '🎰 ' + SITE.name;
+    document.getElementById('gtopPid').textContent = getCurrentPlayer() || '';
+    onChipsChange(c => { document.getElementById('gtopGrade').textContent = getPrizeGrade(c || 0).emoji; });
 
     let currentChips = 0;
 
