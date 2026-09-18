@@ -294,6 +294,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
   <script src="../js/site-config.js"></script>
+  <script src="../js/balance.js"></script>
   <script>
     // 로그인 체크
     if (!getCurrentPlayer()) window.location.href = '../index.html';
@@ -532,7 +533,9 @@
       playSfx('spin');
 
       // 결과 미리 결정 (가중치 랜덤)
-      const result = [weightedRandomSymbol(), weightedRandomSymbol(), weightedRandomSymbol()];
+      const result = steerOutcome(currentChips,
+        () => [weightedRandomSymbol(), weightedRandomSymbol(), weightedRandomSymbol()],
+        r => evaluate(r, bet).payout - bet);
 
       // 릴별 0.5초 간격 순차 정지
       await Promise.all(reels.map((reel, i) =>

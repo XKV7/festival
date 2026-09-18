@@ -338,6 +338,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
   <script src="../js/site-config.js"></script>
+  <script src="../js/balance.js"></script>
   <script>
     // 로그인 체크
     if (!getCurrentPlayer()) window.location.href = '../index.html';
@@ -609,7 +610,12 @@
       playSfx('bet');
       playSfx('spin');
 
-      dice = [0, 0, 0].map(() => Math.floor(Math.random() * 6) + 1);
+      const netFor = d => {
+        let w = 0;
+        for (const [key, amt] of Object.entries(bets)) w += amt * BET_DEFS[key].payout(d);
+        return w - total;
+      };
+      dice = steerOutcome(currentChips, () => [0, 0, 0].map(() => Math.floor(Math.random() * 6) + 1), netFor);
       await rollDice(dice);
 
       // 판정

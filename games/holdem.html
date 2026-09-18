@@ -315,6 +315,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
   <script src="../js/site-config.js"></script>
+  <script src="../js/balance.js"></script>
   <script>
     // 로그인 체크
     if (!getCurrentPlayer()) window.location.href = '../index.html';
@@ -814,8 +815,14 @@
       if (aiStack < AI_REBUY_BELOW) { aiStack = AI_START_STACK; log('임태현 리바이 → 5,000'); }
       handNo++;
       button = other(button);
+      const showdownNet = d => {
+        const n = d.length;
+        const me = [d[n - 1], d[n - 3]], ai = [d[n - 2], d[n - 4]], board = [d[n - 5], d[n - 6], d[n - 7], d[n - 8], d[n - 9]];
+        const a = evaluateBest(me.concat(board)), b = evaluateBest(ai.concat(board));
+        return a > b ? 1 : a < b ? -1 : 0;
+      };
       H = {
-        deck: freshDeck(), board: [], me: [], ai: [],
+        deck: steerOutcome(currentChips, freshDeck, showdownNet), board: [], me: [], ai: [],
         pot: 0, committed: { me: 0, ai: 0 }, streetBet: { me: 0, ai: 0 },
         stack: { me: currentChips, ai: aiStack }, allin: { me: false, ai: false },
         street: 'preflop', lastRaiseSize: BB, folded: null,

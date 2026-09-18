@@ -394,6 +394,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
   <script src="../js/site-config.js"></script>
+  <script src="../js/balance.js"></script>
   <script>
     // 로그인 체크
     if (!getCurrentPlayer()) window.location.href = '../index.html';
@@ -662,6 +663,37 @@
       clearTable();
       showResult('카드를 나눠주는 중...', `총 베팅 ${total.toLocaleString()} 칩`, '');
       playSfx('bet');
+
+      // 목표 칩 조절: 다음 6장을 미리 뽑아 결과를 평가하고 슈 맨 위에 배치
+      const simulate = cards => {
+        const [P1, B1, P2, B2, X5, X6] = cards;
+        let pc = [P1, P2], bc = [B1, B2];
+        let ps = handTotal(pc), bs = handTotal(bc);
+        if (ps < 8 && bs < 8) {
+          let third = null, idx = 4;
+          if (ps <= 5) { pc.push(cards[idx++]); third = cardPoint(pc[2].rank); ps = handTotal(pc); }
+          if (bankerDraws(bs, third)) { bc.push(cards[idx++]); bs = handTotal(bc); }
+        }
+        const w = ps > bs ? 'player' : bs > ps ? 'banker' : 'tie';
+        let win = 0;
+        for (const [key, amt] of Object.entries(bets)) {
+          if (key === w) win += Math.floor(amt * ((w === 'banker' && bs === 6) ? SUPER_SIX : PAYOUT[key]));
+          else if (w === 'tie') win += amt;
+        }
+        return win - total;
+      };
+      const sampleSix = () => {
+        const picked = [];
+        const pool = shoe.slice();
+        for (let i = 0; i < 6; i++) picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+        return picked;
+      };
+      if (balancePlan(currentChips).k > 1) {   // 뽑기 1회면 슈 그대로 (자연 확률)
+        if (shoe.length < RESHUFFLE_AT) buildShoe();
+        const chosen = steerOutcome(currentChips, sampleSix, simulate);
+        chosen.forEach(c => { const i = shoe.indexOf(c); if (i >= 0) shoe.splice(i, 1); });
+        shoe.push(...chosen.slice().reverse());   // pop 순서 = P1, B1, P2, B2, 3번째 카드들
+      }
 
       // 플레이어 → 뱅커 교대로 2장씩
       await dealTo('player');
