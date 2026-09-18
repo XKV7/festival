@@ -33,8 +33,8 @@ sfx/                (선택) bet/win/lose/spin/card/chip/bust.mp3 를 넣으면 
    - **간단**: `js/firebase-config.js` 상단의 `firebaseConfig` 자리표시자를 복사한 값으로 바꿔 커밋. (`databaseURL` 필수)
    - **키를 저장소에 남기지 않기**: GitHub 저장소 **Settings → Secrets and variables → Actions → New repository secret**, 이름 `FIREBASE_CONFIG_JSON`, 값은 firebaseConfig를 JSON으로 (예: `{"apiKey":"...","authDomain":"...","databaseURL":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}`). 배포할 때 워크플로가 자동으로 파일에 넣습니다.
 
-### 2. GitHub Pages 켜기 (최초 1회)
-1. 저장소 **Settings → Pages → Build and deployment → Source** 를 **GitHub Actions** 로 선택.
+### 2. GitHub Pages
+1. 별도 설정 없이 워크플로가 Pages를 자동으로 켭니다. (자동 활성화가 안 되면 저장소 **Settings → Pages → Build and deployment → Source** 를 **GitHub Actions** 로 선택.)
 2. `main` 브랜치에 푸시(또는 PR 머지)하면 `.github/workflows/deploy-pages.yml` 이 자동 실행되어 게시됩니다. **Actions** 탭에서 진행 상황을 볼 수 있고, 수동 실행은 Actions → Deploy to GitHub Pages → Run workflow.
 3. 주소: `https://<GitHub아이디>.github.io/festival/` (Settings → Pages 에 표시됨). 이 저장소는 https://xkv7.github.io/festival/ 입니다.
 
