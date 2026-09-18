@@ -2,7 +2,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyAvWfY9Q8fsTa4UFyWFMNs1OrACPpFbG1w",
   authDomain: "festival-b3bfa.firebaseapp.com",
-  databaseURL: "여기에-붙여넣기",
+  databaseURL: "https://festival-b3bfa-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "festival-b3bfa",
   storageBucket: "festival-b3bfa.firebasestorage.app",
   messagingSenderId: "621767691851",
