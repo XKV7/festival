@@ -7,7 +7,7 @@
 ```
 index.html          로그인 (계정 선택 + PIN)
 lobby.html          게임 로비
-admin.html          관리자 패널 (계정 생성 / 정산 / 초기화 / 모니터링)
+admin-7c2e9f.html   관리자 패널 (계정 생성 / 정산 / 초기화 / 모니터링) ← 링크 없음, 비밀번호 필요
 css/style.css       공용 테마
 js/firebase-config.js   Firebase 초기화 + 계정/칩 공용 함수  ← 배포 전 설정값 입력 필요
 games/
@@ -39,9 +39,15 @@ sfx/                (선택) bet/win/lose/spin/card/chip/bust.mp3 를 넣으면 
 3. 주소: `https://<GitHub아이디>.github.io/festival/` (Settings → Pages 에 표시됨). 이 저장소는 https://xkv7.github.io/festival/ 입니다.
 
 ### 3. 행사 준비
-1. `https://<주소>/admin.html` 접속 → **계정 60개 생성**. 계정 ID와 PIN 목록을 CSV로 내보내 접수 데스크에 비치.
+1. `https://<주소>/admin-7c2e9f.html` 접속 (로그인 화면에 링크 없음, 스태프만 주소를 공유) → 관리자 비밀번호 입력 → **계정 60개 생성**. 계정 ID와 PIN 목록을 CSV로 내보내 접수 데스크에 비치.
 2. 컴퓨터실 PC 8대에서 `https://<주소>/` 를 전체화면(F11)으로 열어 둠.
 3. 학생은 계정 + PIN으로 로그인 → 로비에서 게임 → 종료 시 접수 데스크에서 정산(관리자 패널의 정산 처리).
+
+## 관리자 페이지 보안
+- 주소를 `admin-7c2e9f.html`로 바꾸고 로그인 화면의 링크를 없앴습니다. 학생에게 노출되지 않게 주소는 스태프끼리만 공유하세요.
+- 페이지에 들어가면 관리자 비밀번호를 물어봅니다. 비밀번호는 SHA-256 해시로만 파일에 들어 있습니다.
+- 비밀번호 변경: 새 비밀번호의 해시를 만들어(`node -e "console.log(require('crypto').createHash('sha256').update('새비밀번호').digest('hex'))"`) `admin-7c2e9f.html`의 `ADMIN_PASS_SHA256` 값을 교체합니다.
+- DB 규칙이 공개 읽기/쓰기이므로 이 잠금은 "학생이 실수로/호기심에 들어오는 것"을 막는 수준입니다. 행사 후 DB를 삭제하세요.
 
 ## 칩 흐름 규칙
 - 모든 칩 변동은 `updateChips(amount)`(트랜잭션)로만 처리하며, 각 게임은 라운드가 끝날 때 순손익을 한 번에 반영합니다.
