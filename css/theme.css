@@ -189,13 +189,13 @@ body.v2::before {
 .topnav .right { display: flex; align-items: center; gap: 10px; }
 .topnav .chip-display { padding: 7px 16px; }
 .topnav .chip-display .chip-amount { font-size: 18px; }
-.topnav .player-pill {
+.player-pill {
   display: flex; align-items: center; gap: 8px;
   background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 50px; padding: 7px 14px; font-size: 13px; color: var(--text);
 }
-.topnav .player-pill .grade { font-size: 14px; }
-.topnav .player-pill .pid { color: var(--text-dim); font-weight: 700; }
+.player-pill .grade { font-size: 14px; }
+.player-pill .pid { color: var(--text-dim); font-weight: 700; }
 
 .section-head {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
