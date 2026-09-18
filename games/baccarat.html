@@ -688,9 +688,19 @@
         for (let i = 0; i < 6; i++) picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
         return picked;
       };
-      if (balancePlan(currentChips).k > 1) {   // 뽑기 1회면 슈 그대로 (자연 확률)
-        if (shoe.length < RESHUFFLE_AT) buildShoe();
-        const chosen = steerOutcome(currentChips, sampleSix, simulate);
+      // 배율 상한: 타이(x9) 등이 총 베팅 대비 상한 이상이면 그런 결과는 걸러야 하므로 미리 뽑는다
+      const capBreakable = ['player', 'banker', 'tie'].some(w => {
+        let pay = 0;
+        for (const [key, amt] of Object.entries(bets)) {
+          if (key === w) pay += Math.floor(amt * PAYOUT[key]);
+          else if (w === 'tie') pay += amt;
+        }
+        return !capOK(total, pay);
+      });
+      const plan = balancePlan(currentChips);
+      if (plan.k > 1 || capBreakable) {   // 뽑기 1회·상한 무관이면 슈 그대로 (자연 확률)
+        if (shoe.length < RESHUFFLE_AT + 6) buildShoe();   // 딜 도중 리셔플되면 미리 뽑은 카드가 무효가 되므로 여유를 둔다
+        const chosen = steerOutcome(currentChips, sampleSix, simulate, { plan, bet: total });
         chosen.forEach(c => { const i = shoe.indexOf(c); if (i >= 0) shoe.splice(i, 1); });
         shoe.push(...chosen.slice().reverse());   // pop 순서 = P1, B1, P2, B2, 3번째 카드들
       }

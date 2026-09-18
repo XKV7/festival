@@ -286,7 +286,7 @@
 
     <div class="game-area">
       <div class="hl-title">🃏 HIGH · LOW</div>
-      <div class="hl-sub">베팅 10 ~ 500 · 다음 카드가 높을까 낮을까? · 같은 숫자는 나오지 않음</div>
+      <div class="hl-sub">베팅 10 ~ 300 · 다음 카드가 높을까 낮을까? · 같은 숫자는 나오지 않음</div>
 
       <div class="hl-status">
         <div class="hl-stat"><div class="label">베팅</div><div class="value" id="statBet">-</div></div>
@@ -331,7 +331,7 @@
         <div class="bet-controls">
           <button class="btn btn-outline btn-small" onclick="adjustBet(-50)">-50</button>
           <button class="btn btn-outline btn-small" onclick="adjustBet(-10)">-10</button>
-          <input type="number" id="betAmount" value="50" min="10" max="500" step="10" onchange="clampBet()">
+          <input type="number" id="betAmount" value="50" min="10" max="300" step="10" onchange="clampBet()">
           <button class="btn btn-outline btn-small" onclick="adjustBet(+10)">+10</button>
           <button class="btn btn-outline btn-small" onclick="adjustBet(+50)">+50</button>
           <button class="btn btn-outline btn-small" onclick="setMaxBet()">MAX</button>
@@ -355,7 +355,7 @@
       <div class="mult-table">
         <h3>📈 연승 배율표 (베팅액 × 배율)</h3>
         <div class="mult-grid" id="multGrid"></div>
-        <div class="mult-note">맞추면 연승 +1 · 틀리면 베팅액 전부 손실 · STOP으로 언제든 확정 (1연승은 본전)</div>
+        <div class="mult-note">맞추면 연승 +1 · 틀리면 베팅액 전부 손실 · STOP으로 언제든 확정 (1연승은 본전) · 확정 순이익 수수료 5%</div>
       </div>
     </div>
   </div>
@@ -408,7 +408,7 @@
 
     // ============ 게임 설정 ============
     const MIN_BET = 10;
-    const MAX_BET = 500;
+    const MAX_BET = 300;
     const BET_STEP = 10;
 
     // 연승 배율표 (6연승 이상은 x3.5 고정)
@@ -597,7 +597,7 @@
         const mult = multFor(streak);
         showResult(
           `✅ 정답! ${streak}연승`,
-          `현재 배율 x${mult} · 확정 시 ${Math.floor(bet * mult).toLocaleString()} 칩`,
+          `현재 배율 x${mult} · 지금 확정하면 +${applyFee(Math.floor(bet * mult) - bet).toLocaleString()} 칩`,
           'result-win'
         );
         renderStatus();
@@ -636,12 +636,12 @@
       setPhase('busy');
       const mult = multFor(streak);
       const total = Math.floor(bet * mult);
-      const net = total - bet;
+      const net = applyFee(total - bet);   // 승리 순이익 수수료
       playSfx('chip');
       $('curCard').classList.add('win-glow');
       showResult(
         `💰 수익 확정! +${net.toLocaleString()} 칩`,
-        `${streak}연승 · x${mult} · 총 ${total.toLocaleString()} 칩 획득`,
+        `${streak}연승 · x${mult} · 수수료 5% 차감`,
         'result-win'
       );
       await settle(net);

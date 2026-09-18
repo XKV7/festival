@@ -269,7 +269,7 @@
 
     <div class="game-area">
       <div class="sb-title">🎲 SIC BO</div>
-      <div class="sb-sub">주사위 3개 · 칩을 고르고 보드를 눌러 베팅 (한 곳당 10 ~ 500) · 복수 베팅 가능</div>
+      <div class="sb-sub">주사위 3개 · 칩을 고르고 보드를 눌러 베팅 (한 곳당 10 ~ 500) · 복수 베팅 가능 · 당첨 순이익 수수료 5%</div>
 
       <div class="sb-top">
         <div class="dice-bowl" id="bowl">
@@ -615,7 +615,7 @@
         for (const [key, amt] of Object.entries(bets)) w += amt * BET_DEFS[key].payout(d);
         return w - total;
       };
-      dice = steerOutcome(currentChips, () => [0, 0, 0].map(() => Math.floor(Math.random() * 6) + 1), netFor);
+      dice = steerOutcome(currentChips, () => [0, 0, 0].map(() => Math.floor(Math.random() * 6) + 1), netFor, { bet: total });
       await rollDice(dice);
 
       // 판정
@@ -630,7 +630,7 @@
           hitKeys.push(key);
         }
       }
-      const net = winnings - total;
+      const net = applyFee(winnings - total);   // 승리 순이익 수수료
 
       // 표시
       const kind = triple ? '트리플' : sum >= 11 ? '대' : '소';
@@ -649,7 +649,7 @@
       renderHistory();
 
       if (net > 0) {
-        showResult(`🎉 +${net.toLocaleString()} 칩`, `당첨: ${hitKeys.map(k => BET_DEFS[k].label).join(', ')} · 지급 ${winnings.toLocaleString()}`, 'result-win');
+        showResult(`🎉 +${net.toLocaleString()} 칩`, `당첨: ${hitKeys.map(k => BET_DEFS[k].label).join(', ')} · 지급 ${winnings.toLocaleString()} · 수수료 5% 차감`, 'result-win');
         playSfx('win');
       } else if (net === 0) {
         showResult('본전', `지급 ${winnings.toLocaleString()} = 베팅 ${total.toLocaleString()}`, 'result-push');

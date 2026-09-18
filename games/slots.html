@@ -243,7 +243,7 @@
 
     <div class="game-area">
       <div class="slot-title">🎰 SLOT MACHINE</div>
-      <div class="slot-sub">베팅 10 ~ 200 · 같은 심볼 3개 = 잭팟 · 2개 일치 = 본전</div>
+      <div class="slot-sub">베팅 10 ~ 200 · 같은 심볼 3개 = 잭팟 · 2개 일치 = 본전 · 당첨 순이익 수수료 5%</div>
 
       <div class="slot-machine" id="slotMachine">
         <div class="reels">
@@ -535,7 +535,7 @@
       // 결과 미리 결정 (가중치 랜덤)
       const result = steerOutcome(currentChips,
         () => [weightedRandomSymbol(), weightedRandomSymbol(), weightedRandomSymbol()],
-        r => evaluate(r, bet).payout - bet);
+        r => evaluate(r, bet).payout - bet, { bet });
 
       // 릴별 0.5초 간격 순차 정지
       await Promise.all(reels.map((reel, i) =>
@@ -544,7 +544,7 @@
 
       // 판정 + 칩 정산 (베팅 차감과 지급을 합산해 한 번에 반영 → 올인 후 승리 시 오파산 방지)
       const r = evaluate(result, bet);
-      const net = r.payout - bet;
+      const net = applyFee(r.payout - bet);   // 승리 순이익 수수료
 
       r.hits.forEach(i => reels[i].el.classList.add('hit'));
 
@@ -553,7 +553,7 @@
         if (r.symbol === '7️⃣') machine.classList.add('jackpot');
         highlightPayRow('t-' + r.symbol);
         const label = r.symbol === '7️⃣' ? '🎉 JACKPOT!!! 🎉' : `🎉 ${r.symbol}${r.symbol}${r.symbol} 대당첨!`;
-        showResult(label, `x${r.mult} · +${net.toLocaleString()} 칩`, 'result-win');
+        showResult(label, `x${r.mult} · +${net.toLocaleString()} 칩 (수수료 5% 차감)`, 'result-win');
         playSfx('win');
       } else if (r.type === 'pair') {
         highlightPayRow('pair');

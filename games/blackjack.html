@@ -229,7 +229,7 @@
 
     <div class="game-area">
       <div class="bj-title">🂡 BLACKJACK</div>
-      <div class="bj-sub">베팅 20 ~ 500 · 21에 가까운 쪽이 승리 · 딜러 임태현은 소프트 17에서 HIT</div>
+      <div class="bj-sub">베팅 20 ~ 500 · 21에 가까운 쪽이 승리 · 딜러 임태현은 소프트 17에서 HIT · 승리 순이익 수수료 5%</div>
 
       <div class="bj-table">
         <div class="hand-area dealer" id="dealerArea">
@@ -386,6 +386,7 @@
     let phase = 'bet';   // bet | busy | play
     let bet = 0;
     let doubled = false;
+    let handPlan = { mode: 'best', k: 1 };   // 이번 핸드의 조절 계획 (핸드당 한 번만 판단)
     let player = [];
     let dealer = [];
     let dealerHidden = true;
@@ -540,7 +541,8 @@
       playSfx('bet');
 
       // 목표 칩 조절: 첫 4장을 미리 뽑아 "스탠드 시 결과"로 평가하고 슈 맨 위에 배치
-      if (balancePlan(currentChips).k > 1) {
+      handPlan = balancePlan(currentChips);
+      if (handPlan.k > 1) {
         if (shoe.length < RESHUFFLE_AT + 10) buildShoe();
         const drawFour = () => {
           const pool = shoe.slice(), taken = [];
@@ -563,7 +565,7 @@
           if (pt < dt) return -1;
           return 0;
         };
-        const chosen = steerOutcome(currentChips, drawFour, netOf);
+        const chosen = steerOutcome(currentChips, drawFour, netOf, { plan: handPlan });
         chosen.forEach(c => { const i = shoe.indexOf(c); if (i >= 0) shoe.splice(i, 1); });
         shoe.push(...chosen.slice().reverse());
       }
@@ -639,7 +641,7 @@
       await wait(600);
 
       // 목표 칩 조절: 딜러가 받을 카드를 미리 뽑아 평가하고 슈 맨 위에 배치
-      if (balancePlan(currentChips).k > 1) {   // 뽑기 1회면 슈 그대로 (자연 확률)
+      if (handPlan.k > 1) {   // 딜 때 정한 계획을 그대로 사용. 뽑기 1회면 슈 그대로 (자연 확률)
         const pTotal = handTotal(player).total;
         const drawDealer = () => {
           const pool = shoe.slice(), hand = dealer.slice(), taken = [];
@@ -656,7 +658,7 @@
           return 0;
         };
         if (shoe.length < RESHUFFLE_AT + 10) buildShoe();
-        const chosen = steerOutcome(currentChips, drawDealer, netOf);
+        const chosen = steerOutcome(currentChips, drawDealer, netOf, { plan: handPlan });
         chosen.forEach(c => { const i = shoe.indexOf(c); if (i >= 0) shoe.splice(i, 1); });
         shoe.push(...chosen.slice().reverse());
       }
@@ -678,13 +680,13 @@
       let net = 0;
       let msg, cls;
       if (outcome === 'blackjack') {
-        net = Math.floor(bet * BLACKJACK_PAY);
+        net = applyFee(Math.floor(bet * BLACKJACK_PAY));   // 승리 순이익 수수료
         msg = `🎉 BLACKJACK! +${net.toLocaleString()} 칩`;
         cls = 'result-win';
         glowHand('player', 'glow-gold');
         playSfx('win');
       } else if (outcome === 'win') {
-        net = bet;
+        net = applyFee(bet);   // 승리 순이익 수수료
         msg = `✅ 승리! +${net.toLocaleString()} 칩`;
         cls = 'result-win';
         glowHand('player', 'glow-win');
@@ -702,7 +704,7 @@
         if (handTotal(player).total <= 21) glowHand('player', 'glow-lose');
         playSfx('lose');
       }
-      showResult(msg, detail + (doubled ? ' · 더블다운' : ''), cls);
+      showResult(msg, detail + (doubled ? ' · 더블다운' : '') + (net > 0 ? ' · 수수료 5% 차감' : ''), cls);
       const row = document.querySelector(`.rule-row[data-key="${outcome}"]`);
       if (row) row.classList.add('hit');
 
