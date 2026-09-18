@@ -101,9 +101,9 @@ function getCurrentPlayer() {
 // 상품 등급 계산
 function getPrizeGrade(chips) {
   if (chips <= 0) return { grade: '파산', emoji: '💀', prize: '상품 없음' };
-  if (chips < 1000) return { grade: '본전 이하', emoji: '😅', prize: '상품 없음' };
-  if (chips < 2000) return { grade: '소이득', emoji: '🙂', prize: '간식' };
-  if (chips < 4000) return { grade: '중이득', emoji: '😎', prize: '상품 5,000원' };
-  if (chips < 7000) return { grade: '대이득', emoji: '🤑', prize: '상품 7~8,000원' };
+  if (chips < 1500) return { grade: '본전 이하', emoji: '😅', prize: '상품 없음' };
+  if (chips < 3000) return { grade: '소이득', emoji: '🙂', prize: '간식' };
+  if (chips < 5500) return { grade: '중이득', emoji: '😎', prize: '상품 3,000원' };
+  if (chips < 7777) return { grade: '대이득', emoji: '🤑', prize: '상품 5,000원' };
   return { grade: '잭팟', emoji: '🎉', prize: '특별 상품' };
 }
