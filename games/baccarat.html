@@ -290,6 +290,7 @@
       <div class="gtop-left">
         <a href="../lobby.html" class="back-btn">← 로비</a>
         <span class="gtop-logo" id="gtopLogo">🎰 CASINO ROYALE</span>
+        <span class="dealer-pill" id="gtopDealer">🤵 딜러</span>
       </div>
       <div class="gtop-right">
         <div class="chip-display">
@@ -333,7 +334,7 @@
           </div>
           <div class="bet-area banker" data-key="banker" onclick="placeBet('banker')" oncontextmenu="event.preventDefault(); removeBet('banker')">
             <div class="ba-name">BANKER</div>
-            <div class="ba-pay">x1.95 (5% 커미션)</div>
+            <div class="ba-pay">x1.95 · 6으로 이기면 x1.5</div>
             <div class="ba-amt" id="amt-banker"></div>
           </div>
         </div>
@@ -368,7 +369,7 @@
         <h3>📋 배당 & 서드카드 규칙</h3>
         <div class="rules-grid">
           <div class="rule-row" data-key="player"><span>플레이어 승</span><span class="pay">x2</span></div>
-          <div class="rule-row" data-key="banker"><span>뱅커 승</span><span class="pay">x1.95</span></div>
+          <div class="rule-row" data-key="banker"><span>뱅커 승 (합 6으로 승리 시)</span><span class="pay">x1.95 (x1.5)</span></div>
           <div class="rule-row" data-key="tie"><span>타이</span><span class="pay">x9</span></div>
           <div class="rule-row"><span>타이 시 플레이어/뱅커 베팅</span><span class="pay">반환</span></div>
         </div>
@@ -401,6 +402,7 @@
     buildTicker(document.getElementById('ticker'));
     document.getElementById('gtopLogo').textContent = '🎰 ' + SITE.name;
     document.getElementById('gtopPid').textContent = getCurrentPlayer() || '';
+    document.getElementById('gtopDealer').textContent = '🤵 딜러 ' + SITE.dealer;
     onChipsChange(c => { document.getElementById('gtopGrade').textContent = getPrizeGrade(c || 0).emoji; });
 
     let currentChips = 0;
@@ -430,6 +432,7 @@
     const DECKS = 8;
     const RESHUFFLE_AT = 60;
     const PAYOUT = { player: 2, banker: 1.95, tie: 9 };   // 총 지급 배수
+    const SUPER_SIX = 1.5;   // 뱅커가 합 6으로 이기면 뱅커 베팅은 x1.5 (Super 6 규칙)
     const AREA_LABEL = { player: '플레이어', banker: '뱅커', tie: '타이' };
 
     const SUITS = [
@@ -703,7 +706,8 @@
       const hitKeys = [];
       for (const [key, amt] of Object.entries(bets)) {
         if (key === winner) {
-          winnings += Math.floor(amt * PAYOUT[key]);
+          const mult = (winner === 'banker' && b === 6) ? SUPER_SIX : PAYOUT[key];
+          winnings += Math.floor(amt * mult);
           hitKeys.push(key);
         } else if (winner === 'tie') {
           winnings += amt;   // 타이 시 플레이어/뱅커 베팅 반환
@@ -725,7 +729,7 @@
       if (road.length > 12) road.pop();
       renderRoad();
 
-      const title = winner === 'tie' ? `🤝 타이 (${p} : ${b})` : `${AREA_LABEL[winner]} 승 (${p} : ${b})`;
+      const title = winner === 'tie' ? `🤝 타이 (${p} : ${b})` : `${AREA_LABEL[winner]} 승 (${p} : ${b})${winner === 'banker' && b === 6 ? ' · 슈퍼식스 x1.5' : ''}`;
       if (net > 0) {
         showResult(`🎉 ${title} · +${net.toLocaleString()} 칩`, `당첨: ${hitKeys.map(k => AREA_LABEL[k]).join(', ')} · 지급 ${winnings.toLocaleString()}`, 'result-win');
         playSfx('win');

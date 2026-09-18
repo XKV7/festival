@@ -190,6 +190,7 @@
       <div class="gtop-left">
         <a href="../lobby.html" class="back-btn">← 로비</a>
         <span class="gtop-logo" id="gtopLogo">🎰 CASINO ROYALE</span>
+        <span class="dealer-pill" id="gtopDealer">🤵 딜러</span>
       </div>
       <div class="gtop-right">
         <div class="chip-display">
@@ -203,7 +204,7 @@
 
     <div class="game-area">
       <div class="ip-title">🪶 INDIAN POKER</div>
-      <div class="ip-sub">딜러 AI와 1:1 · 내 카드는 못 보고 상대 카드만 보인다 · 높은 숫자가 승리</div>
+      <div class="ip-sub">딜러 임태현과 1:1 · 내 카드는 못 보고 상대 카드만 보인다 · 높은 숫자가 승리</div>
 
       <div class="ip-score">
         <div class="score-box win"><div class="label">승</div><div class="value" id="scoreWin">0</div></div>
@@ -221,7 +222,7 @@
             </div>
           </div>
           <div class="seat-info">
-            <div class="seat-name">🤖 DEALER AI</div>
+            <div class="seat-name">🤵 임태현</div>
             <div><span class="seat-tag" id="aiTag">후</span></div>
             <div class="seat-put">투입 <b id="aiPut">0</b></div>
             <div class="seat-action" id="aiAction"></div>
@@ -288,8 +289,8 @@
           카드는 <b>1~10</b> (각 4장). 양쪽이 앤티를 내고 1장씩 받습니다. 내 카드는 이마에 붙인 것처럼 <b>나만 못 보고</b>, 상대 카드는 보입니다.<br>
           <b>선</b>: 베팅 (단위만큼 추가) 또는 다이 (앤티 포기) → <b>후</b>: 콜 / 레이즈 (단위 2배) / 폴드 → 레이즈면 선: 콜 / 폴드<br>
           카드 공개 → <b>높은 숫자 승리</b>, 팟 획득 · 같은 숫자면 무승부 (각자 투입금 반환) · 다이/폴드는 상대가 팟 획득<br>
-          선/후는 라운드마다 교대. 딜러 AI는 내 카드와 내 행동만 보고 판단하며, 자기 카드는 보지 못합니다.<br>
-          플레이어가 팟을 가져갈 때 <b>팟의 5%</b>를 테이블 수수료로 뗍니다.
+          선/후는 라운드마다 교대. 딜러 임태현은 내 카드와 내 행동만 보고 판단하며, 자기 카드는 보지 못합니다.<br>
+          플레이어가 팟을 가져갈 때 <b>팟의 8%</b>를 테이블 수수료로 뗍니다.
         </p>
       </div>
     </div>
@@ -316,6 +317,7 @@
     buildTicker(document.getElementById('ticker'));
     document.getElementById('gtopLogo').textContent = '🎰 ' + SITE.name;
     document.getElementById('gtopPid').textContent = getCurrentPlayer() || '';
+    document.getElementById('gtopDealer').textContent = '🤵 딜러 ' + SITE.dealer;
     onChipsChange(c => { document.getElementById('gtopGrade').textContent = getPrizeGrade(c || 0).emoji; });
 
     let currentChips = 0;
@@ -344,7 +346,7 @@
     const MAX_BET = 500;
     const BET_STEP = 10;
     const MAX_ROUND_COST = 3;   // 앤티 + 베팅 + 레이즈 콜 = 단위 × 3
-    const RAKE = 0.05;          // 플레이어가 팟을 가져갈 때 하우스가 떼는 비율 (0으로 두면 수수료 없음)
+    const RAKE = 0.08;          // 플레이어가 팟을 가져갈 때 하우스가 떼는 비율 (0으로 두면 수수료 없음)
     const AI_DELAY = [650, 1100];
 
     // ============ 상태 ============
@@ -613,23 +615,23 @@
     async function aiFirstTurn() {
       setTurn('ai');
       setPhase('busy');
-      showResult('AI가 선입니다', '생각 중...', '');
+      showResult('임태현이 선입니다', '생각 중...', '');
       await wait(AI_DELAY[0] + rnd() * (AI_DELAY[1] - AI_DELAY[0]));
       const a = aiFirstAction(meCard);
       if (a === 'die') {
         setAction('ai', 'DIE', 'fold');
-        log(`AI 다이 (내 카드 ${meCard})`);
+        log(`임태현 다이 (내 카드 ${meCard})`);
         return finish('ai-fold');
       }
       aiPut += unit; pot += unit;
       renderTable();
       setAction('ai', `BET +${unit}`, 'bet');
       playSfx('chip');
-      log(`AI 베팅 +${unit}`);
+      log(`임태현 베팅 +${unit}`);
       tendency.betsFaced++;
       // 내 차례: 콜 / 레이즈 / 폴드
       setTurn('me');
-      showResult('AI가 베팅했습니다', `콜(+${unit.toLocaleString()}) · 레이즈(+${(unit * 2).toLocaleString()}) · 폴드`, '');
+      showResult('임태현이 베팅했습니다', `콜(+${unit.toLocaleString()}) · 레이즈(+${(unit * 2).toLocaleString()}) · 폴드`, '');
       setActions([
         { id: 'callBtn', label: `CALL +${unit}`, cls: 'btn-bet', fn: () => act('call') },
         { id: 'raiseBtn', label: `RAISE +${unit * 2}`, cls: 'btn-raise', fn: () => act('raise') },
@@ -684,28 +686,28 @@
     // ---- AI가 후 (내 베팅에 대응) ----
     async function aiSecondTurn() {
       setTurn('ai');
-      showResult('AI 차례', '생각 중...', '');
+      showResult('임태현 차례', '생각 중...', '');
       await wait(AI_DELAY[0] + rnd() * (AI_DELAY[1] - AI_DELAY[0]));
       const a = aiSecondAction(meCard);
       if (a === 'fold') {
         setAction('ai', 'FOLD', 'fold');
-        log(`AI 폴드 (내 카드 ${meCard})`);
+        log(`임태현 폴드 (내 카드 ${meCard})`);
         return finish('ai-fold');
       }
       if (a === 'call') {
         aiPut += unit; pot += unit;
         renderTable(); playSfx('chip');
         setAction('ai', `CALL +${unit}`, 'call');
-        log(`AI 콜 +${unit}`);
+        log(`임태현 콜 +${unit}`);
         return showdown();
       }
       // raise
       aiPut += unit * 2; pot += unit * 2;
       renderTable(); playSfx('chip');
       setAction('ai', `RAISE +${unit * 2}`, 'raise');
-      log(`AI 레이즈 +${unit * 2}`);
+      log(`임태현 레이즈 +${unit * 2}`);
       setTurn('me');
-      showResult('AI가 레이즈했습니다!', `콜(+${unit.toLocaleString()}) 또는 폴드`, '');
+      showResult('임태현이 레이즈했습니다!', `콜(+${unit.toLocaleString()}) 또는 폴드`, '');
       setActions([
         { id: 'callBtn', label: `CALL +${unit}`, cls: 'btn-bet', fn: () => act('call') },
         { id: 'foldBtn', label: 'FOLD', cls: 'btn-fold', fn: () => act('fold') }
@@ -716,18 +718,18 @@
     // ---- AI가 선인데 내가 레이즈 ----
     async function aiFacingRaiseTurn() {
       setTurn('ai');
-      showResult('AI 차례', '레이즈를 받을지 생각 중...', '');
+      showResult('임태현 차례', '레이즈를 받을지 생각 중...', '');
       await wait(AI_DELAY[0] + rnd() * (AI_DELAY[1] - AI_DELAY[0]));
       const a = aiFacingRaise(meCard);
       if (a === 'fold') {
         setAction('ai', 'FOLD', 'fold');
-        log(`AI 폴드 (내 카드 ${meCard})`);
+        log(`임태현 폴드 (내 카드 ${meCard})`);
         return finish('ai-fold');
       }
       aiPut += unit; pot += unit;
       renderTable(); playSfx('chip');
       setAction('ai', `CALL +${unit}`, 'call');
-      log(`AI 콜 +${unit}`);
+      log(`임태현 콜 +${unit}`);
       return showdown();
     }
 
@@ -747,7 +749,7 @@
     // ---- 정산 ----
     async function finish(outcome) {
       let net = 0, msg, sub, cls;
-      const detail = `내 카드 ${meCard} vs AI ${aiCard}`;
+      const detail = `내 카드 ${meCard} vs 임태현 ${aiCard}`;
       const rake = Math.floor(pot * RAKE);
       if (outcome === 'me-win') {
         net = pot - rake - mePut;
@@ -756,7 +758,7 @@
         score.win++; playSfx('win');
       } else if (outcome === 'ai-fold') {
         net = pot - rake - mePut;
-        msg = `✅ AI 포기 · +${net.toLocaleString()} 칩`; sub = `팟 ${pot.toLocaleString()} 획득${rake ? ` (수수료 ${rake})` : ''} · 내 카드는 ${meCard}였습니다`; cls = 'result-win';
+        msg = `✅ 임태현 포기 · +${net.toLocaleString()} 칩`; sub = `팟 ${pot.toLocaleString()} 획득${rake ? ` (수수료 ${rake})` : ''} · 내 카드는 ${meCard}였습니다`; cls = 'result-win';
         setFlipped('meCard', true);
         $('meCard').classList.add('glow-win');
         score.win++; playSfx('win');
@@ -767,7 +769,7 @@
         score.lose++; playSfx('lose');
       } else if (outcome === 'me-fold') {
         net = -mePut;
-        msg = `🏳️ 포기 · ${net.toLocaleString()} 칩`; sub = `내 카드는 ${meCard}였습니다 (AI ${aiCard})`; cls = 'result-lose';
+        msg = `🏳️ 포기 · ${net.toLocaleString()} 칩`; sub = `내 카드는 ${meCard}였습니다 (임태현 ${aiCard})`; cls = 'result-lose';
         setFlipped('meCard', true);
         $('aiCard').classList.add('glow-win');
         score.lose++; playSfx('lose');

@@ -3,6 +3,7 @@ const SITE = {
   name: 'CASINO ROYALE',
   school: '경문고등학교',
   festival: '2026 경문제',
+  dealer: '임태현',          // 모든 게임의 딜러 이름 (선생님 요청)
 
   // 배너에 흐르는 동아리 이름 — 실제 동아리 이름으로 바꾸세요
   clubs: [
@@ -23,7 +24,7 @@ const SITE = {
     '★ 24시간 무제한 운영 ★',
     '첫 입장 1,000칩 즉시 지급',
     '먹튀 없음 · 정산은 접수 데스크에서',
-    'AI 딜러 상시 대기중',
+    '딜러 임태현 상시 대기중',
     '오늘의 잭팟 주인공은 당신',
     '신규 게임 8종 오픈'
   ],
@@ -36,8 +37,8 @@ const SITE = {
     'blackjack':    { badge: '',     badgeType: '',     min: 20,  tag: '카드' },
     'baccarat':     { badge: '독점', badgeType: 'excl', min: 20,  tag: '테이블' },
     'sicbo':        { badge: '신규', badgeType: 'new',  min: 10,  tag: '테이블' },
-    'indian-poker': { badge: 'AI',   badgeType: 'ai',   min: 50,  tag: 'AI 딜러' },
-    'holdem':       { badge: 'AI',   badgeType: 'ai',   min: 20,  tag: 'AI 딜러' }
+    'indian-poker': { badge: '임태현', badgeType: 'ai',   min: 50,  tag: '임태현 딜러' },
+    'holdem':       { badge: '임태현', badgeType: 'ai',   min: 20,  tag: '임태현 딜러' }
   }
 };
 

@@ -202,6 +202,7 @@
       <div class="gtop-left">
         <a href="../lobby.html" class="back-btn">← 로비</a>
         <span class="gtop-logo" id="gtopLogo">🎰 CASINO ROYALE</span>
+        <span class="dealer-pill" id="gtopDealer">🤵 딜러</span>
       </div>
       <div class="gtop-right">
         <div class="chip-display">
@@ -215,7 +216,7 @@
 
     <div class="game-area">
       <div class="hd-title">♠ TEXAS HOLD'EM</div>
-      <div class="hd-sub">딜러 AI와 헤즈업 노리밋 · 블라인드 10 / 20 · 내 칩이 곧 내 스택</div>
+      <div class="hd-sub">딜러 임태현과 헤즈업 노리밋 · 블라인드 10 / 20 · 내 칩이 곧 내 스택</div>
 
       <div class="hd-score">
         <div class="score-box"><div class="label">핸드</div><div class="value" id="scoreHands">0</div></div>
@@ -228,7 +229,7 @@
         <div class="seat ai" id="seatAi">
           <div class="seat-cards" id="aiCards"></div>
           <div class="seat-info">
-            <div class="seat-name">🤖 DEALER AI <span class="dealer-btn" id="aiBtn" style="display:none">D</span></div>
+            <div class="seat-name">🤵 임태현 <span class="dealer-btn" id="aiBtn" style="display:none">D</span></div>
             <div class="seat-stack">스택 <b id="aiStack">5,000</b></div>
             <div class="seat-bet" id="aiBet"></div>
             <div class="seat-action" id="aiAction"></div>
@@ -257,7 +258,7 @@
       </div>
 
       <div class="hd-result">
-        <div class="result-msg" id="resultMsg">딜러 AI와 헤즈업</div>
+        <div class="result-msg" id="resultMsg">딜러 임태현과 헤즈업</div>
         <div class="result-sub" id="resultSub">START를 누르면 블라인드를 걸고 핸드가 시작됩니다</div>
       </div>
 
@@ -294,7 +295,7 @@
         <p>
           블라인드 <b>10 / 20</b>, 노리밋. 헤즈업에서는 <b>딜러 버튼(D)이 스몰 블라인드</b>이며 프리플롭에 먼저, 플롭부터는 나중에 행동합니다.<br>
           프리플롭 → 플롭(3장) → 턴 → 리버 → 쇼다운. 7장 중 최고 5장 조합이 승리, 같으면 팟을 나눕니다.<br>
-          딜러 AI는 자기 카드와 공개 카드만 보고 판단합니다 (내 카드는 보지 않음). 플레이어가 팟을 가져갈 때 <b>팟의 5%</b>를 테이블 수수료로 뗍니다.
+          딜러 임태현은 자기 카드와 공개 카드만 보고 판단합니다 (내 카드는 보지 않음). 플레이어가 팟을 가져갈 때 <b>팟의 8%</b>를 테이블 수수료로 뗍니다.
         </p>
         <div class="rank-list" id="rankList"></div>
       </div>
@@ -322,6 +323,7 @@
     buildTicker(document.getElementById('ticker'));
     document.getElementById('gtopLogo').textContent = '🎰 ' + SITE.name;
     document.getElementById('gtopPid').textContent = getCurrentPlayer() || '';
+    document.getElementById('gtopDealer').textContent = '🤵 딜러 ' + SITE.dealer;
     onChipsChange(c => { document.getElementById('gtopGrade').textContent = getPrizeGrade(c || 0).emoji; });
 
     let currentChips = 0;
@@ -349,7 +351,7 @@
     const SB = 10, BB = 20;
     const AI_START_STACK = 5000;
     const AI_REBUY_BELOW = 1000;
-    const RAKE = 0.05;              // 플레이어가 팟을 가져갈 때 하우스가 떼는 비율 (0이면 없음)
+    const RAKE = 0.08;              // 플레이어가 팟을 가져갈 때 하우스가 떼는 비율 (0이면 없음)
     const MC_SAMPLES = 220;         // 포스트플롭 에퀴티 몬테카를로 표본 수
     const AI_DELAY = [700, 1300];
 
@@ -579,14 +581,14 @@
     function applyAction(who, act) {
       // act: {type: 'fold'|'check'|'call'|'raise', to?: number}
       const o = other(who);
-      if (act.type === 'fold') { H.folded = who; setAction(who, 'FOLD', 'fold'); log(`${who === 'me' ? '나' : 'AI'} 폴드`); return 'fold'; }
-      if (act.type === 'check') { setAction(who, 'CHECK', 'check'); log(`${who === 'me' ? '나' : 'AI'} 체크`); return 'passive'; }
+      if (act.type === 'fold') { H.folded = who; setAction(who, 'FOLD', 'fold'); log(`${who === 'me' ? '나' : '임태현'} 폴드`); return 'fold'; }
+      if (act.type === 'check') { setAction(who, 'CHECK', 'check'); log(`${who === 'me' ? '나' : '임태현'} 체크`); return 'passive'; }
       if (act.type === 'call') {
         const need = toCall(who);
         const paid = commit(who, need);
         refundExcess();
         setAction(who, H.allin[who] ? `CALL ${paid} (올인)` : `CALL ${paid}`, H.allin[who] ? 'allin' : 'call');
-        log(`${who === 'me' ? '나' : 'AI'} 콜 ${paid}${H.allin[who] ? ' (올인)' : ''}`);
+        log(`${who === 'me' ? '나' : '임태현'} 콜 ${paid}${H.allin[who] ? ' (올인)' : ''}`);
         playSfx('chip');
         return 'passive';
       }
@@ -601,7 +603,7 @@
       if (raiseSize >= Math.max(BB, H.lastRaiseSize)) H.lastRaiseSize = raiseSize;
       const label = prevOpp === 0 ? 'BET' : 'RAISE';
       setAction(who, `${label} ${H.streetBet[who]}${H.allin[who] ? ' (올인)' : ''}`, H.allin[who] ? 'allin' : 'raise');
-      log(`${who === 'me' ? '나' : 'AI'} ${prevOpp === 0 ? '베팅' : '레이즈'} → ${H.streetBet[who]}${H.allin[who] ? ' (올인)' : ''}`);
+      log(`${who === 'me' ? '나' : '임태현'} ${prevOpp === 0 ? '베팅' : '레이즈'} → ${H.streetBet[who]}${H.allin[who] ? ' (올인)' : ''}`);
       playSfx('chip');
       if (H.streetBet[who] <= prevOpp) return 'passive';   // 올인인데 콜에도 못 미침
       return 'aggressive';
@@ -645,7 +647,7 @@
         const minTo = Math.min(minRaiseTo('me'), maxRaiseTo('me'));
         $('raiseAmount').min = minTo; $('raiseAmount').max = maxRaiseTo('me');
         presetRaise(H.streetBet.ai === 0 ? 'half' : 'min');
-        showResult(tc === 0 ? '당신의 차례' : `AI 베팅 ${H.streetBet.ai.toLocaleString()} · 콜 ${tc.toLocaleString()}`,
+        showResult(tc === 0 ? '당신의 차례' : `임태현 베팅 ${H.streetBet.ai.toLocaleString()} · 콜 ${tc.toLocaleString()}`,
           `팟 ${H.pot.toLocaleString()} · 내 스택 ${H.stack.me.toLocaleString()}`, '');
         setPhase('act');
         if (!canRaise) $('raiseBtn').disabled = true;
@@ -744,7 +746,7 @@
 
     async function aiDecision() {
       setPhase('busy');
-      showResult('AI 차례', '생각 중...', '');
+      showResult('임태현 차례', '생각 중...', '');
       await wait(AI_DELAY[0] + Math.random() * (AI_DELAY[1] - AI_DELAY[0]));
       const tc = toCall('ai');
       const pot = H.pot;
@@ -809,7 +811,7 @@
     async function startHand() {
       if (phase !== 'idle') return;
       if (currentChips < BB) { updateStartButton(); return; }
-      if (aiStack < AI_REBUY_BELOW) { aiStack = AI_START_STACK; log('딜러 AI 리바이 → 5,000'); }
+      if (aiStack < AI_REBUY_BELOW) { aiStack = AI_START_STACK; log('임태현 리바이 → 5,000'); }
       handNo++;
       button = other(button);
       H = {
@@ -833,8 +835,8 @@
       H.lastRaiseSize = BB;
       renderStacks();
       playSfx('bet');
-      log(`핸드 시작 · 버튼 ${button === 'me' ? '나' : 'AI'} · 블라인드 ${SB}/${BB}`);
-      showResult('블라인드 투입', `${sbWho === 'me' ? '나' : 'AI'} SB ${SB} · ${bbWho === 'me' ? '나' : 'AI'} BB ${BB}`, '');
+      log(`핸드 시작 · 버튼 ${button === 'me' ? '나' : '임태현'} · 블라인드 ${SB}/${BB}`);
+      showResult('블라인드 투입', `${sbWho === 'me' ? '나' : '임태현'} SB ${SB} · ${bbWho === 'me' ? '나' : '임태현'} BB ${BB}`, '');
 
       // 홀카드 2장씩
       for (let k = 0; k < 2; k++) {
@@ -893,7 +895,7 @@
       let winner, meScore = null, aiScore = null, detail = '';
       if (H.folded) {
         winner = other(H.folded);
-        detail = H.folded === 'me' ? '내가 폴드' : 'AI가 폴드';
+        detail = H.folded === 'me' ? '내가 폴드' : '임태현이 폴드';
       } else {
         // 쇼다운: AI 카드 공개
         $('aiCards').querySelectorAll('.card').forEach(c => c.classList.add('flipped'));
@@ -903,7 +905,7 @@
         const meAll = H.me.concat(H.board), aiAll = H.ai.concat(H.board);
         meScore = evaluateBest(meAll); aiScore = evaluateBest(aiAll);
         const meName = HAND_NAMES[categoryOf(meScore)], aiName = HAND_NAMES[categoryOf(aiScore)];
-        $('aiHand').innerHTML = `AI 핸드: <b>${aiName}</b>`;
+        $('aiHand').innerHTML = `임태현 핸드: <b>${aiName}</b>`;
         $('meHand').innerHTML = `내 핸드: <b>${meName}</b>`;
         winner = meScore > aiScore ? 'me' : aiScore > meScore ? 'ai' : 'tie';
         detail = `${meName} vs ${aiName}`;
@@ -949,7 +951,7 @@
       await wait(400);
       renderStacks();
       setPhase('idle');
-      $('idleHint').textContent = `다음 핸드는 ${other(button) === 'me' ? '내가' : 'AI가'} 버튼 · 스페이스바로 시작`;
+      $('idleHint').textContent = `다음 핸드는 ${other(button) === 'me' ? '내가' : '임태현이'} 버튼 · 스페이스바로 시작`;
     }
 
     function highlightBest(all, who) {

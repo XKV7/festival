@@ -229,6 +229,7 @@
       <div class="gtop-left">
         <a href="../lobby.html" class="back-btn">← 로비</a>
         <span class="gtop-logo" id="gtopLogo">🎰 CASINO ROYALE</span>
+        <span class="dealer-pill" id="gtopDealer">🤵 딜러</span>
       </div>
       <div class="gtop-right">
         <div class="chip-display">
@@ -301,6 +302,7 @@
     buildTicker(document.getElementById('ticker'));
     document.getElementById('gtopLogo').textContent = '🎰 ' + SITE.name;
     document.getElementById('gtopPid').textContent = getCurrentPlayer() || '';
+    document.getElementById('gtopDealer').textContent = '🤵 딜러 ' + SITE.dealer;
     onChipsChange(c => { document.getElementById('gtopGrade').textContent = getPrizeGrade(c || 0).emoji; });
 
     let currentChips = 0;
@@ -331,15 +333,15 @@
 
     const SYMBOLS = ['🍒', '🍋', '🍊', '🍇', '⭐', '💎', '7️⃣'];
 
-    // 가중치 (하우스 엣지 ~17%)
+    // 가중치 (하우스 엣지 약 33% · 원안 30/25/20/12/8/4/1 은 26%)
     const REEL_WEIGHTS = {
-      '🍒': 30,
-      '🍋': 25,
+      '🍒': 26,
+      '🍋': 23,
       '🍊': 20,
-      '🍇': 12,
-      '⭐': 8,
-      '💎': 4,
-      '7️⃣': 1
+      '🍇': 14,
+      '⭐': 9,
+      '💎': 6,
+      '7️⃣': 2
     };
 
     // 3개 일치 배당 (베팅액 기준 배수)
