@@ -5,8 +5,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🔧 관리자 - CASINO ROYALE</title>
   <link rel="stylesheet" href="css/style.css">
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    .gate-overlay {
+      position: fixed; inset: 0; z-index: 10000;
+      background: var(--bg-primary);
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .gate-overlay.hidden { display: none; }
+    .gate-box {
+      background: var(--bg-card); border: 1px solid rgba(231,76,60,0.4);
+      border-radius: 16px; padding: 36px; width: 100%; max-width: 380px; text-align: center;
+    }
+    .gate-box h2 { color: var(--red); font-size: 20px; margin-bottom: 6px; }
+    .gate-box p { color: var(--text-dim); font-size: 13px; margin-bottom: 22px; }
+    .gate-box input {
+      width: 100%; padding: 12px 16px; background: var(--bg-primary);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--text);
+      font-size: 18px; text-align: center; letter-spacing: 6px; font-family: inherit; outline: none;
+      margin-bottom: 14px;
+    }
+    .gate-box input:focus { border-color: var(--red); }
+    .gate-err { color: var(--red); font-size: 13px; min-height: 18px; margin-top: 10px; }
+    .admin-body { display: none; }
+    .admin-body.open { display: block; }
+  </style>
 </head>
 <body>
+  <!-- 관리자 비밀번호 게이트 -->
+  <div class="gate-overlay" id="gate">
+    <div class="gate-box">
+      <h2>🔧 STAFF ONLY</h2>
+      <p>관리자 비밀번호를 입력하세요</p>
+      <input type="password" id="gatePass" inputmode="numeric" autocomplete="off" placeholder="••••••">
+      <button class="btn btn-red" style="width:100%" onclick="checkGate()">입장</button>
+      <div class="gate-err" id="gateErr"></div>
+    </div>
+  </div>
+
+  <div class="admin-body" id="adminBody">
   <div class="admin-header">
     <div class="admin-title">🔧 관리자 패널</div>
     <div>
@@ -80,19 +117,64 @@
     </div>
   </div>
 
+  </div><!-- /admin-body -->
+
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script>
+    // ============ 관리자 비밀번호 게이트 ============
+    // 비밀번호는 SHA-256 해시로만 저장. 바꾸려면 새 비밀번호의 해시를 아래에 넣으세요:
+    //   node -e "console.log(require('crypto').createHash('sha256').update('새비밀번호').digest('hex'))"
+    //   또는 브라우저 콘솔에서: await sha256('새비밀번호')
+    const ADMIN_PASS_SHA256 = '7d2295a0460a4dc6798b088a0e16ea70584d549d326bf065766410496c3af351';
+    const GATE_KEY = 'adminGateOk';
+    let gateFails = 0;
+
+    async function sha256(text) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    async function checkGate() {
+      const input = document.getElementById('gatePass');
+      const err = document.getElementById('gateErr');
+      const hash = await sha256(input.value.trim());
+      if (hash === ADMIN_PASS_SHA256) {
+        sessionStorage.setItem(GATE_KEY, hash);
+        openAdmin();
+      } else {
+        gateFails++;
+        input.value = '';
+        err.textContent = `비밀번호가 틀렸습니다 (${gateFails}회)`;
+        if (gateFails >= 5) {
+          err.textContent = '5회 실패 · 30초 후 다시 시도하세요';
+          input.disabled = true;
+          setTimeout(() => { input.disabled = false; gateFails = 0; err.textContent = ''; }, 30000);
+        }
+      }
+    }
+    document.getElementById('gatePass').addEventListener('keydown', e => { if (e.key === 'Enter') checkGate(); });
+
     let currentFilter = 'all';
     let allAccounts = {};
+    let adminOpened = false;
 
-    // 실시간 계정 데이터 리스너
-    db.ref('accounts').on('value', snap => {
-      allAccounts = snap.val() || {};
-      updateStats();
-      renderTable();
-    });
+    function openAdmin() {
+      if (adminOpened) return;
+      adminOpened = true;
+      document.getElementById('gate').classList.add('hidden');
+      document.getElementById('adminBody').classList.add('open');
+      // 실시간 계정 데이터 리스너 (인증 후에만 연결)
+      db.ref('accounts').on('value', snap => {
+        allAccounts = snap.val() || {};
+        updateStats();
+        renderTable();
+      });
+    }
+
+    // 같은 탭에서 이미 인증했으면 바로 열기
+    if (sessionStorage.getItem(GATE_KEY) === ADMIN_PASS_SHA256) openAdmin();
+    else document.getElementById('gatePass').focus();
 
     function updateStats() {
       const accounts = Object.values(allAccounts);
