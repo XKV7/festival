@@ -1,5 +1,6 @@
 # GitHub Pages 배포: main 브랜치에 푸시되면 저장소 루트를 그대로 정적 사이트로 게시합니다.
-# 최초 1회 설정: 저장소 Settings → Pages → Build and deployment → Source: "GitHub Actions"
+# Pages 활성화는 워크플로가 자동으로 처리합니다(enablement: true). 수동으로 하려면
+# 저장소 Settings → Pages → Build and deployment → Source: "GitHub Actions"
 #
 # (선택) Firebase 설정값을 저장소에 커밋하고 싶지 않다면 Settings → Secrets and variables → Actions 에
 # FIREBASE_CONFIG_JSON 시크릿을 만들고 Firebase 콘솔의 firebaseConfig 객체를 JSON으로 넣으세요. 예:
@@ -57,8 +58,10 @@ jobs:
             echo "::warning::js/firebase-config.js 에 Firebase 설정값이 아직 없습니다. 파일을 채우거나 FIREBASE_CONFIG_JSON 시크릿을 추가하세요. 사이트는 배포되지만 로그인이 동작하지 않습니다."
           fi
 
-      - name: Setup Pages
+      - name: Setup Pages (Pages가 꺼져 있으면 자동으로 켬)
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
