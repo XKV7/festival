@@ -150,11 +150,11 @@
     // ---- 상품 등급표 ----
     const GRADES = [
       { min: 0, max: 0, range: '0' },
-      { min: 1, max: 999, range: '1 ~ 999' },
-      { min: 1000, max: 1999, range: '1,000 ~ 1,999' },
-      { min: 2000, max: 3999, range: '2,000 ~ 3,999' },
-      { min: 4000, max: 6999, range: '4,000 ~ 6,999' },
-      { min: 7000, max: Infinity, range: '7,000 +' }
+      { min: 1, max: 1499, range: '1 ~ 1,499' },
+      { min: 1500, max: 2999, range: '1,500 ~ 2,999' },
+      { min: 3000, max: 5499, range: '3,000 ~ 5,499' },
+      { min: 5500, max: 7776, range: '5,500 ~ 7,776' },
+      { min: 7777, max: Infinity, range: '7,777 +' }
     ];
     function renderGrades(chips) {
       const row = document.getElementById('gradeRow');
