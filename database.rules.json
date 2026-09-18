@@ -4,7 +4,17 @@
       ".read": true,
       ".write": true
     },
-    "indianPoker": { ".read": true, ".write": true },
-    "holdem": { ".read": true, ".write": true }
+    "indianPoker": {
+      ".read": true,
+      ".write": true
+    },
+    "holdem": {
+      ".read": true,
+      ".write": true
+    },
+    "chipLog": {
+      ".read": true,
+      ".write": true
+    }
   }
 }
