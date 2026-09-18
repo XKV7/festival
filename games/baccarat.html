@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎰 바카라 - CASINO ROYALE</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    /* ============ 바카라 전용 스타일 ============ */
+    .bc-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .bc-sub { text-align: center; color: var(--text-dim); font-size: 13px; margin-bottom: 18px; }
+
+    /* 테이블 */
+    .bc-table {
+      background: radial-gradient(ellipse at center, #16452f 0%, #0d2b1d 70%, #0a1f15 100%);
+      border: 3px solid var(--gold-dark);
+      border-radius: 28px;
+      padding: 18px 16px 16px;
+      box-shadow: var(--neon-glow), inset 0 0 40px rgba(0,0,0,0.5);
+    }
+    .bc-hands {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .hand {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 6px 14px;
+      border-radius: 18px;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+    .hand.winner {
+      border-color: var(--gold-light);
+      background: rgba(212,168,67,0.12);
+      box-shadow: 0 0 24px rgba(212,168,67,0.45);
+    }
+    .hand.active .hand-name { text-shadow: 0 0 10px currentColor; }
+    .hand-name { font-size: 15px; font-weight: 900; letter-spacing: 4px; margin-bottom: 4px; }
+    .hand.player .hand-name { color: #5dade2; }
+    .hand.banker .hand-name { color: #ff6b6b; }
+    .hand-total {
+      min-width: 44px;
+      padding: 2px 12px;
+      border-radius: 20px;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(212,168,67,0.5);
+      color: var(--gold-light);
+      font-weight: 900;
+      font-size: 18px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .hand-total.natural { background: var(--gold-light); color: #000; border-color: var(--gold-light); }
+    .hand-cards {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      min-height: 126px;
+    }
+    /* 3번째 카드: 아래 줄에 가로로 눕혀서 */
+    .third-slot {
+      flex-basis: 100%;
+      display: flex;
+      justify-content: center;
+      height: 96px;
+      margin-top: 4px;
+    }
+    .bc-vs {
+      align-self: center;
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--gold);
+      text-shadow: 0 0 10px var(--gold);
+      padding-top: 40px;
+    }
+
+    /* ============ 트럼프 카드 ============ */
+    .card-scene { width: 90px; height: 126px; perspective: 800px; }
+    .card-scene.third { transform: rotate(90deg); margin-top: -15px; }
+    .card {
+      position: relative; width: 100%; height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
+    }
+    .card.flipped { transform: rotateY(180deg); }
+    .card-face {
+      position: absolute; inset: 0;
+      border-radius: 8px;
+      backface-visibility: hidden; -webkit-backface-visibility: hidden;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+    }
+    .card-back {
+      background:
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 6px, transparent 6px 12px),
+        repeating-linear-gradient(-45deg, rgba(255,255,255,0.08) 0 6px, transparent 6px 12px),
+        linear-gradient(135deg, #1f3a8a, #0f1f4d);
+      border: 4px solid #fff;
+    }
+    .card-front {
+      background: #fff; color: #111;
+      transform: rotateY(180deg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card-front.red { color: #d0202a; }
+    .card-front .corner { position: absolute; font-size: 14px; font-weight: 900; line-height: 1; text-align: center; }
+    .card-front .corner.tl { top: 6px; left: 7px; }
+    .card-front .corner.br { bottom: 6px; right: 7px; transform: rotate(180deg); }
+    .card-front .corner .suit { font-size: 12px; display: block; }
+    .card-front .center { font-size: 42px; line-height: 1; }
+    .card-scene.deal { animation: deal-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+    .card-scene.deal.third { animation: deal-in-third 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+    @keyframes deal-in {
+      from { transform: translate(0, -200px) rotate(15deg); opacity: 0; }
+      to   { transform: translate(0, 0) rotate(0); opacity: 1; }
+    }
+    @keyframes deal-in-third {
+      from { transform: translate(0, -200px) rotate(105deg); opacity: 0; }
+      to   { transform: translate(0, 0) rotate(90deg); opacity: 1; }
+    }
+
+    /* 베팅 영역 */
+    .bet-areas {
+      display: grid;
+      grid-template-columns: 1fr 0.8fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+      user-select: none;
+    }
+    .bet-area {
+      position: relative;
+      border-radius: 16px;
+      padding: 14px 10px 12px;
+      text-align: center;
+      cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.15);
+      transition: all 0.15s;
+      background: rgba(0,0,0,0.3);
+    }
+    .bet-area:hover { filter: brightness(1.2); transform: translateY(-2px); }
+    .bet-area.player { border-color: rgba(93,173,226,0.6); }
+    .bet-area.banker { border-color: rgba(255,107,107,0.6); }
+    .bet-area.tie    { border-color: rgba(46,204,113,0.6); }
+    .bet-area .ba-name { font-size: 18px; font-weight: 900; letter-spacing: 3px; }
+    .bet-area.player .ba-name { color: #5dade2; }
+    .bet-area.banker .ba-name { color: #ff6b6b; }
+    .bet-area.tie .ba-name { color: var(--green); }
+    .bet-area .ba-pay { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .bet-area .ba-amt {
+      margin-top: 8px;
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--gold-light);
+      min-height: 26px;
+    }
+    .bet-area.has-bet { background: rgba(212,168,67,0.08); }
+    .bet-area.win {
+      border-color: var(--gold-light);
+      box-shadow: 0 0 0 2px var(--gold-light), 0 0 22px rgba(240,214,138,0.8);
+      animation: area-blink 0.5s ease-in-out 5;
+    }
+    @keyframes area-blink { 50% { filter: brightness(1.6); } }
+    .bet-areas.locked .bet-area { cursor: not-allowed; }
+    .bet-areas.locked .bet-area:hover { filter: none; transform: none; }
+    .bet-area .chip-badge {
+      position: absolute;
+      right: -6px; top: -10px;
+      min-width: 26px; height: 26px; padding: 0 5px;
+      border-radius: 13px;
+      background: radial-gradient(circle at 40% 35%, var(--gold-light), var(--gold-dark));
+      border: 2px dashed #fff;
+      color: #000; font-size: 11px; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.7);
+      pointer-events: none;
+    }
+
+    /* 결과 */
+    .bc-result {
+      min-height: 76px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding-top: 10px;
+    }
+    .result-msg { padding: 6px; }
+    .result-sub { font-size: 14px; color: var(--text-dim); }
+    .result-push { color: var(--gold-light); }
+    .result-win.pop, .result-lose.pop, .result-push.pop { animation: pop 0.4s ease-out; }
+    @keyframes pop {
+      0%   { transform: scale(0.6); opacity: 0; }
+      70%  { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+
+    /* 칩 & 컨트롤 */
+    .chip-row {
+      display: flex; justify-content: center; align-items: center;
+      gap: 10px; flex-wrap: wrap; margin: 6px 0 10px;
+    }
+    .chip-row .label { color: var(--text-dim); font-size: 13px; margin-right: 4px; }
+    .chip-btn {
+      width: 52px; height: 52px; border-radius: 50%;
+      border: 3px dashed rgba(255,255,255,0.7);
+      font-weight: 900; font-size: 13px; cursor: pointer; color: #fff;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+      transition: transform 0.15s, box-shadow 0.15s;
+      font-family: inherit;
+    }
+    .chip-btn:hover { transform: translateY(-3px); }
+    .chip-btn.active { transform: scale(1.15); box-shadow: 0 0 0 3px var(--gold-light), 0 0 14px var(--gold); }
+    .chip-20  { background: radial-gradient(circle at 40% 35%, #5dade2, #1f618d); }
+    .chip-50  { background: radial-gradient(circle at 40% 35%, #ff7675, #b03a2e); }
+    .chip-100 { background: radial-gradient(circle at 40% 35%, #58d68d, #1e8449); }
+    .chip-500 { background: radial-gradient(circle at 40% 35%, #f4d03f, #b7950b); color: #000; }
+    .bc-controls {
+      display: flex; justify-content: center; align-items: center;
+      gap: 12px; flex-wrap: wrap; margin-top: 6px;
+    }
+    .total-bet {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(212,168,67,0.25);
+      border-radius: 10px; padding: 8px 16px;
+      font-size: 14px; color: var(--text-dim);
+    }
+    .total-bet b { color: var(--gold-light); font-size: 18px; }
+    .btn-deal { font-size: 20px; letter-spacing: 3px; padding: 14px 50px; border-radius: 50px; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .hint { text-align: center; color: var(--text-dim); font-size: 12px; margin-top: 10px; }
+
+    /* 히스토리 (비드 로드) */
+    .road-label { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; text-align: center; margin: 18px 0 6px; }
+    .road { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; min-height: 28px; }
+    .bead {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 900; color: #fff;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+    .bead.P { background: #1f618d; }
+    .bead.B { background: #b03a2e; }
+    .bead.T { background: #1e8449; }
+    .bead.latest { box-shadow: 0 0 0 2px var(--gold); }
+
+    /* 룰 */
+    .rules {
+      margin-top: 22px;
+      background: var(--bg-secondary);
+      border-radius: 12px; padding: 14px 18px;
+      border: 1px solid rgba(212,168,67,0.15);
+    }
+    .rules h3 { color: var(--gold); font-size: 15px; margin-bottom: 8px; letter-spacing: 2px; }
+    .rules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 16px; font-size: 13px; }
+    .rule-row { display: flex; justify-content: space-between; padding: 4px 8px; border-radius: 6px; }
+    .rule-row .pay { color: var(--gold-light); font-weight: 700; }
+    .rule-row.hit { background: rgba(212,168,67,0.2); }
+    .rules p { font-size: 12px; color: var(--text-dim); margin-top: 8px; line-height: 1.6; }
+
+    @media (max-width: 560px) {
+      .card-scene { width: 64px; height: 90px; }
+      .third-slot { height: 70px; }
+      .card-scene.third { margin-top: -10px; }
+      .card-front .center { font-size: 30px; }
+      .card-front .corner { font-size: 11px; }
+      .hand-cards { min-height: 92px; gap: 5px; }
+      .bc-vs { padding-top: 30px; font-size: 16px; }
+      .bet-areas { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+      .bet-area .ba-name { font-size: 14px; letter-spacing: 1px; }
+      .btn-deal { padding: 12px 34px; font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-wrapper">
+    <div class="game-topbar">
+      <a href="../lobby.html" class="back-btn">← 로비로</a>
+      <div class="chip-display">
+        <span class="chip-icon">🪙</span>
+        <span class="chip-amount" id="chipCount">---</span>
+      </div>
+    </div>
+
+    <div class="game-area">
+      <div class="bc-title">🀄 BACCARAT</div>
+      <div class="bc-sub">플레이어 · 뱅커 · 타이에 베팅 (한 곳당 20 ~ 500) · 합의 1의 자리가 9에 가까운 쪽 승리</div>
+
+      <div class="bc-table">
+        <div class="bc-hands">
+          <div class="hand player" id="playerHand">
+            <div class="hand-name">PLAYER</div>
+            <div class="hand-total" id="playerTotal">-</div>
+            <div class="hand-cards" id="playerCards"></div>
+          </div>
+          <div class="bc-vs">VS</div>
+          <div class="hand banker" id="bankerHand">
+            <div class="hand-name">BANKER</div>
+            <div class="hand-total" id="bankerTotal">-</div>
+            <div class="hand-cards" id="bankerCards"></div>
+          </div>
+        </div>
+
+        <div class="bet-areas" id="betAreas">
+          <div class="bet-area player" data-key="player" onclick="placeBet('player')" oncontextmenu="event.preventDefault(); removeBet('player')">
+            <div class="ba-name">PLAYER</div>
+            <div class="ba-pay">x2</div>
+            <div class="ba-amt" id="amt-player"></div>
+          </div>
+          <div class="bet-area tie" data-key="tie" onclick="placeBet('tie')" oncontextmenu="event.preventDefault(); removeBet('tie')">
+            <div class="ba-name">TIE</div>
+            <div class="ba-pay">x9</div>
+            <div class="ba-amt" id="amt-tie"></div>
+          </div>
+          <div class="bet-area banker" data-key="banker" onclick="placeBet('banker')" oncontextmenu="event.preventDefault(); removeBet('banker')">
+            <div class="ba-name">BANKER</div>
+            <div class="ba-pay">x1.95 (5% 커미션)</div>
+            <div class="ba-amt" id="amt-banker"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bc-result">
+        <div class="result-msg" id="resultMsg">베팅 후 DEAL!</div>
+        <div class="result-sub" id="resultSub">칩을 고르고 PLAYER / TIE / BANKER 영역을 클릭하세요</div>
+      </div>
+
+      <div class="chip-row">
+        <span class="label">칩 선택</span>
+        <button class="chip-btn chip-20" data-v="20" onclick="selectChip(20)">20</button>
+        <button class="chip-btn chip-50 active" data-v="50" onclick="selectChip(50)">50</button>
+        <button class="chip-btn chip-100" data-v="100" onclick="selectChip(100)">100</button>
+        <button class="chip-btn chip-500" data-v="500" onclick="selectChip(500)">500</button>
+      </div>
+
+      <div class="bc-controls">
+        <div class="total-bet">총 베팅 <b id="totalBet">0</b></div>
+        <button class="btn btn-outline btn-small" id="undoBtn" onclick="undoBet()">↶ 되돌리기</button>
+        <button class="btn btn-outline btn-small" id="clearBtn" onclick="clearBets()">전체 취소</button>
+        <button class="btn btn-outline btn-small" id="rebetBtn" onclick="rebet()" disabled>↻ 같은 베팅</button>
+        <button class="btn btn-gold btn-deal" id="dealBtn" onclick="deal()">DEAL</button>
+      </div>
+      <div class="hint">스페이스바로 DEAL · 우클릭으로 해당 영역 베팅 취소</div>
+
+      <div class="road-label">최근 결과</div>
+      <div class="road" id="road"></div>
+
+      <div class="rules">
+        <h3>📋 배당 & 서드카드 규칙</h3>
+        <div class="rules-grid">
+          <div class="rule-row" data-key="player"><span>플레이어 승</span><span class="pay">x2</span></div>
+          <div class="rule-row" data-key="banker"><span>뱅커 승</span><span class="pay">x1.95</span></div>
+          <div class="rule-row" data-key="tie"><span>타이</span><span class="pay">x9</span></div>
+          <div class="rule-row"><span>타이 시 플레이어/뱅커 베팅</span><span class="pay">반환</span></div>
+        </div>
+        <p>A=1 · 2~9=액면가 · 10/J/Q/K=0 · 합의 1의 자리만 사용<br>
+          어느 쪽이든 첫 2장이 8 또는 9면 내추럴 → 추가 카드 없음<br>
+          플레이어 0~5 → 3번째 카드 · 6~7 → 스탠드<br>
+          뱅커는 플레이어의 3번째 카드에 따라 표준 테이블로 드로우 결정</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 파산 오버레이 -->
+  <div class="busted-overlay" id="bustedOverlay">
+    <div class="busted-icon">💀</div>
+    <div class="busted-text">파 산</div>
+    <div class="busted-sub">칩을 모두 잃었습니다.<br>접수 데스크에서 카드를 반납해주세요.</div>
+    <button class="btn btn-outline" style="margin-top:30px"
+      onclick="window.location.href='../index.html'">확인</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script>
+    // 로그인 체크
+    if (!getCurrentPlayer()) window.location.href = '../index.html';
+
+    let currentChips = 0;
+
+    // ============ 사운드 ============
+    const SFX = {
+      bet: new Audio('../sfx/bet.mp3'),
+      win: new Audio('../sfx/win.mp3'),
+      lose: new Audio('../sfx/lose.mp3'),
+      spin: new Audio('../sfx/spin.mp3'),
+      card: new Audio('../sfx/card.mp3'),
+      chip: new Audio('../sfx/chip.mp3'),
+      bust: new Audio('../sfx/bust.mp3')
+    };
+    Object.values(SFX).forEach(a => { a.volume = 0.5; a.load(); });
+    function playSfx(name) {
+      try {
+        SFX[name].currentTime = 0;
+        const p = SFX[name].play();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    }
+
+    // ============ 게임 설정 ============
+    const MIN_BET = 20;      // 한 곳당 최소
+    const MAX_BET = 500;     // 한 곳당 최대
+    const DECKS = 8;
+    const RESHUFFLE_AT = 60;
+    const PAYOUT = { player: 2, banker: 1.95, tie: 9 };   // 총 지급 배수
+    const AREA_LABEL = { player: '플레이어', banker: '뱅커', tie: '타이' };
+
+    const SUITS = [
+      { s: '♠', red: false }, { s: '♥', red: true },
+      { s: '♦', red: true },  { s: '♣', red: false }
+    ];
+    const RANK_LABEL = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
+    function rankLabel(r) { return RANK_LABEL[r] || String(r); }
+    function cardPoint(r) { return r >= 10 ? 0 : r; }
+    function handTotal(cards) { return cards.reduce((s, c) => s + cardPoint(c.rank), 0) % 10; }
+
+    let shoe = [];
+    function buildShoe() {
+      shoe = [];
+      for (let d = 0; d < DECKS; d++)
+        for (const suit of SUITS)
+          for (let r = 1; r <= 13; r++) shoe.push({ rank: r, suit });
+      for (let i = shoe.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shoe[i], shoe[j]] = [shoe[j], shoe[i]];
+      }
+    }
+    function drawCard() {
+      if (shoe.length < RESHUFFLE_AT) buildShoe();
+      return shoe.pop();
+    }
+
+    // 뱅커 서드카드 표준 테이블 (플레이어가 3번째 카드를 받았을 때)
+    function bankerDraws(bankerTotal, playerThirdPoint) {
+      if (playerThirdPoint === null) return bankerTotal <= 5;   // 플레이어 스탠드 시
+      switch (bankerTotal) {
+        case 0: case 1: case 2: return true;
+        case 3: return playerThirdPoint !== 8;
+        case 4: return playerThirdPoint >= 2 && playerThirdPoint <= 7;
+        case 5: return playerThirdPoint >= 4 && playerThirdPoint <= 7;
+        case 6: return playerThirdPoint === 6 || playerThirdPoint === 7;
+        default: return false;
+      }
+    }
+
+    // ============ 상태 ============
+    let bets = {};          // key → amount
+    let betStack = [];
+    let lastBets = null;
+    let chipValue = 50;
+    let dealing = false;
+    let playerCards = [];
+    let bankerCards = [];
+    const road = [];
+
+    const $ = id => document.getElementById(id);
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+
+    // ============ 카드 렌더 ============
+    function cardElement(card, third) {
+      const scene = document.createElement('div');
+      scene.className = 'card-scene deal' + (third ? ' third' : '');
+      const el = document.createElement('div');
+      el.className = 'card';
+      const back = document.createElement('div');
+      back.className = 'card-face card-back';
+      const front = document.createElement('div');
+      front.className = 'card-face card-front' + (card.suit.red ? ' red' : '');
+      const label = rankLabel(card.rank);
+      front.innerHTML = `
+        <div class="corner tl">${label}<span class="suit">${card.suit.s}</span></div>
+        <div class="center">${card.suit.s}</div>
+        <div class="corner br">${label}<span class="suit">${card.suit.s}</span></div>`;
+      el.appendChild(back); el.appendChild(front);
+      scene.appendChild(el);
+      return scene;
+    }
+
+    async function dealTo(side) {
+      const card = drawCard();
+      const hand = side === 'player' ? playerCards : bankerCards;
+      hand.push(card);
+      const third = hand.length === 3;
+      const box = $(side === 'player' ? 'playerCards' : 'bankerCards');
+      const scene = cardElement(card, third);
+      if (third) {
+        const slot = document.createElement('div');
+        slot.className = 'third-slot';
+        slot.appendChild(scene);
+        box.appendChild(slot);
+      } else {
+        box.appendChild(scene);
+      }
+      $('playerHand').classList.toggle('active', side === 'player');
+      $('bankerHand').classList.toggle('active', side === 'banker');
+      playSfx('card');
+      await wait(420);
+      scene.classList.remove('deal');
+      scene.querySelector('.card').classList.add('flipped');
+      await wait(380);
+      renderTotals();
+      return card;
+    }
+
+    function renderTotals() {
+      const pt = $('playerTotal'), bt = $('bankerTotal');
+      pt.textContent = playerCards.length ? handTotal(playerCards) : '-';
+      bt.textContent = bankerCards.length ? handTotal(bankerCards) : '-';
+      pt.classList.toggle('natural', playerCards.length === 2 && handTotal(playerCards) >= 8);
+      bt.classList.toggle('natural', bankerCards.length === 2 && handTotal(bankerCards) >= 8);
+    }
+    function clearTable() {
+      playerCards = []; bankerCards = [];
+      $('playerCards').innerHTML = '';
+      $('bankerCards').innerHTML = '';
+      ['playerHand', 'bankerHand'].forEach(id => $(id).classList.remove('winner', 'active'));
+      document.querySelectorAll('.bet-area.win').forEach(a => a.classList.remove('win'));
+      document.querySelectorAll('.rule-row.hit').forEach(r => r.classList.remove('hit'));
+      renderTotals();
+    }
+
+    // ============ 베팅 ============
+    function totalBet() { return Object.values(bets).reduce((a, b) => a + b, 0); }
+    function renderBets() {
+      for (const key of ['player', 'banker', 'tie']) {
+        const area = document.querySelector(`.bet-area[data-key="${key}"]`);
+        const amt = bets[key] || 0;
+        $('amt-' + key).textContent = amt ? amt.toLocaleString() : '';
+        area.classList.toggle('has-bet', amt > 0);
+        const old = area.querySelector('.chip-badge');
+        if (old) old.remove();
+        if (amt > 0) {
+          const b = document.createElement('div');
+          b.className = 'chip-badge';
+          b.textContent = amt;
+          area.appendChild(b);
+        }
+      }
+      $('totalBet').textContent = totalBet().toLocaleString();
+      updateButtons();
+    }
+    function selectChip(v) {
+      chipValue = v;
+      document.querySelectorAll('.chip-btn').forEach(b => b.classList.toggle('active', +b.dataset.v === v));
+    }
+    function flash(msg) {
+      $('resultMsg').className = 'result-msg result-lose';
+      $('resultMsg').textContent = msg;
+    }
+    function placeBet(key) {
+      if (dealing) return;
+      const cur = bets[key] || 0;
+      const room = MAX_BET - cur;
+      if (room <= 0) { flash(`한 곳당 최대 ${MAX_BET}`); return; }
+      const affordable = currentChips - totalBet();
+      if (affordable < MIN_BET && cur === 0) { flash('칩이 부족합니다'); return; }
+      if (affordable <= 0) { flash('칩이 부족합니다'); return; }
+      let add = Math.min(chipValue, room, affordable);
+      if (cur + add < MIN_BET) add = Math.min(MIN_BET, affordable);
+      bets[key] = cur + add;
+      betStack.push({ key, amount: add });
+      playSfx('chip');
+      renderBets();
+      $('resultMsg').className = 'result-msg';
+      $('resultMsg').textContent = `${AREA_LABEL[key]}에 ${bets[key].toLocaleString()}`;
+      $('resultSub').textContent = '더 베팅하거나 DEAL을 누르세요';
+    }
+    function removeBet(key) {
+      if (dealing || !bets[key]) return;
+      delete bets[key];
+      betStack = betStack.filter(b => b.key !== key);
+      playSfx('chip');
+      renderBets();
+    }
+    function undoBet() {
+      if (dealing || betStack.length === 0) return;
+      const last = betStack.pop();
+      bets[last.key] = (bets[last.key] || 0) - last.amount;
+      if (bets[last.key] < MIN_BET) delete bets[last.key];
+      playSfx('chip');
+      renderBets();
+    }
+    function clearBets() {
+      if (dealing) return;
+      bets = {}; betStack = [];
+      renderBets();
+    }
+    function rebet() {
+      if (dealing || !lastBets) return;
+      bets = {}; betStack = [];
+      let remaining = currentChips;
+      for (const [key, amt] of Object.entries(lastBets)) {
+        const a = Math.min(amt, remaining);
+        if (a < MIN_BET) continue;
+        bets[key] = a; betStack.push({ key, amount: a });
+        remaining -= a;
+      }
+      playSfx('chip');
+      renderBets();
+    }
+    function updateButtons() {
+      const total = totalBet();
+      const btn = $('dealBtn');
+      if (dealing) { btn.disabled = true; btn.textContent = '...'; }
+      else if (total === 0) { btn.disabled = true; btn.textContent = 'DEAL'; }
+      else if (total > currentChips) { btn.disabled = true; btn.textContent = '칩 부족'; }
+      else { btn.disabled = false; btn.textContent = 'DEAL'; }
+      $('undoBtn').disabled = dealing || betStack.length === 0;
+      $('clearBtn').disabled = dealing || total === 0;
+      $('rebetBtn').disabled = dealing || !lastBets;
+      $('betAreas').classList.toggle('locked', dealing);
+    }
+
+    function showResult(msg, sub, cls) {
+      const m = $('resultMsg');
+      m.className = 'result-msg ' + (cls || '');
+      m.textContent = msg;
+      if (cls) { void m.offsetWidth; m.classList.add('pop'); }
+      $('resultSub').textContent = sub || '';
+    }
+
+    // ============ 라운드 ============
+    async function deal() {
+      if (dealing) return;
+      const total = totalBet();
+      if (total === 0) { flash('먼저 베팅하세요'); return; }
+      if (total > currentChips) { flash('칩이 부족합니다'); updateButtons(); return; }
+
+      dealing = true;
+      lastBets = { ...bets };
+      updateButtons();
+      clearTable();
+      showResult('카드를 나눠주는 중...', `총 베팅 ${total.toLocaleString()} 칩`, '');
+      playSfx('bet');
+
+      // 플레이어 → 뱅커 교대로 2장씩
+      await dealTo('player');
+      await dealTo('banker');
+      await dealTo('player');
+      await dealTo('banker');
+
+      let p = handTotal(playerCards), b = handTotal(bankerCards);
+      const natural = p >= 8 || b >= 8;
+
+      if (!natural) {
+        let playerThird = null;
+        if (p <= 5) {
+          showResult('플레이어 3번째 카드', `플레이어 ${p} → 드로우`, '');
+          await wait(250);
+          const c = await dealTo('player');
+          playerThird = cardPoint(c.rank);
+          p = handTotal(playerCards);
+        } else {
+          showResult('플레이어 스탠드', `플레이어 ${p}`, '');
+          await wait(400);
+        }
+        if (bankerDraws(b, playerThird)) {
+          showResult('뱅커 3번째 카드', `뱅커 ${b} → 드로우`, '');
+          await wait(250);
+          await dealTo('banker');
+          b = handTotal(bankerCards);
+        } else {
+          showResult('뱅커 스탠드', `뱅커 ${b}`, '');
+          await wait(400);
+        }
+      } else {
+        showResult('내추럴!', `${p >= 8 ? '플레이어 ' + p : ''}${p >= 8 && b >= 8 ? ' · ' : ''}${b >= 8 ? '뱅커 ' + b : ''}`, '');
+        await wait(500);
+      }
+
+      ['playerHand', 'bankerHand'].forEach(id => $(id).classList.remove('active'));
+
+      // 판정
+      const winner = p > b ? 'player' : b > p ? 'banker' : 'tie';
+      let winnings = 0;
+      const hitKeys = [];
+      for (const [key, amt] of Object.entries(bets)) {
+        if (key === winner) {
+          winnings += Math.floor(amt * PAYOUT[key]);
+          hitKeys.push(key);
+        } else if (winner === 'tie') {
+          winnings += amt;   // 타이 시 플레이어/뱅커 베팅 반환
+        }
+      }
+      const net = winnings - total;
+
+      // 표시
+      if (winner === 'tie') {
+        $('playerHand').classList.add('winner');
+        $('bankerHand').classList.add('winner');
+      } else {
+        $(winner + 'Hand').classList.add('winner');
+      }
+      hitKeys.forEach(k => document.querySelector(`.bet-area[data-key="${k}"]`).classList.add('win'));
+      const row = document.querySelector(`.rule-row[data-key="${winner}"]`);
+      if (row) row.classList.add('hit');
+      road.unshift(winner);
+      if (road.length > 12) road.pop();
+      renderRoad();
+
+      const title = winner === 'tie' ? `🤝 타이 (${p} : ${b})` : `${AREA_LABEL[winner]} 승 (${p} : ${b})`;
+      if (net > 0) {
+        showResult(`🎉 ${title} · +${net.toLocaleString()} 칩`, `당첨: ${hitKeys.map(k => AREA_LABEL[k]).join(', ')} · 지급 ${winnings.toLocaleString()}`, 'result-win');
+        playSfx('win');
+      } else if (net === 0) {
+        showResult(`${title} · 본전`, winner === 'tie' ? '플레이어/뱅커 베팅 반환' : `지급 ${winnings.toLocaleString()} = 베팅 ${total.toLocaleString()}`, 'result-push');
+        playSfx('chip');
+      } else {
+        showResult(`${title} · ${net.toLocaleString()} 칩`, hitKeys.length ? `일부 당첨: ${hitKeys.map(k => AREA_LABEL[k]).join(', ')}` : '당첨된 베팅이 없습니다', 'result-lose');
+        playSfx('lose');
+      }
+
+      // 칩 정산: 순손익만 한 번에 반영
+      if (net !== 0) {
+        try {
+          await updateChips(net);
+        } catch (e) {
+          console.error('칩 반영 실패', e);
+          showResult('⚠️ 칩 반영 오류', '네트워크를 확인하고 다시 시도하세요', 'result-lose');
+        }
+      }
+
+      bets = {}; betStack = [];
+      renderBets();
+      dealing = false;
+      updateButtons();
+    }
+
+    function renderRoad() {
+      const box = $('road');
+      box.innerHTML = '';
+      road.forEach((w, i) => {
+        const el = document.createElement('div');
+        el.className = 'bead ' + { player: 'P', banker: 'B', tie: 'T' }[w] + (i === 0 ? ' latest' : '');
+        el.textContent = { player: 'P', banker: 'B', tie: 'T' }[w];
+        box.appendChild(el);
+      });
+    }
+
+    // ============ 초기화 ============
+    buildShoe();
+    renderBets();
+
+    document.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); deal(); }
+      else if (e.key === 'z' || e.key === 'Z') undoBet();
+    });
+
+    window.addEventListener('beforeunload', e => {
+      if (dealing) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // 칩 실시간 표시 + 파산 체크
+    onChipsChange(chips => {
+      currentChips = chips || 0;
+      $('chipCount').textContent = currentChips.toLocaleString();
+      if (currentChips <= 0) $('bustedOverlay').classList.add('active');
+      updateButtons();
+    });
+  </script>
+</body>
+</html>
