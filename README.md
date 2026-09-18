@@ -1,6 +1,6 @@
 # 🎰 CASINO ROYALE — 학교 축제 카지노 웹사이트
 
-순수 HTML/CSS/JS + Firebase Realtime Database(CDN compat SDK)로 만든 정적 사이트입니다. 빌드 도구가 없으므로 저장소 루트를 그대로 정적 호스팅에 올리면 됩니다.
+순수 HTML/CSS/JS + Firebase Realtime Database(CDN compat SDK)로 만든 정적 사이트입니다. 빌드 도구가 없으며 GitHub Pages에서 저장소 루트를 그대로 서빙합니다.
 
 ## 구조
 
@@ -22,26 +22,25 @@ games/
 sfx/                (선택) bet/win/lose/spin/card/chip/bust.mp3 를 넣으면 효과음 재생
 ```
 
-## 배포 절차
+## 배포 절차 (GitHub Pages + Firebase만 사용)
 
 ### 1. Firebase 프로젝트 준비
 1. https://console.firebase.google.com 에서 프로젝트 생성.
 2. **빌드 → Realtime Database → 데이터베이스 만들기** (위치는 아무 곳, 규칙은 우선 테스트 모드).
 3. **규칙** 탭에 `database.rules.json` 내용을 붙여넣고 게시. (축제 당일만 쓰는 임시 DB이므로 공개 읽기/쓰기. 행사 후 DB를 삭제하거나 규칙을 `false`로 바꾸세요.)
-4. **프로젝트 설정 → 일반 → 내 앱 → 웹 앱 추가** 후 `firebaseConfig` 값을 복사.
-5. `js/firebase-config.js` 상단의 `firebaseConfig` 자리표시자를 복사한 값으로 교체. `databaseURL`이 반드시 들어가야 합니다.
+4. **프로젝트 설정 → 일반 → 내 앱 → 웹 앱 추가**(호스팅 체크 불필요) 후 `firebaseConfig` 객체를 복사.
+5. 설정값 넣기 — 둘 중 하나:
+   - **간단**: `js/firebase-config.js` 상단의 `firebaseConfig` 자리표시자를 복사한 값으로 바꿔 커밋. (`databaseURL` 필수)
+   - **키를 저장소에 남기지 않기**: GitHub 저장소 **Settings → Secrets and variables → Actions → New repository secret**, 이름 `FIREBASE_CONFIG_JSON`, 값은 firebaseConfig를 JSON으로 (예: `{"apiKey":"...","authDomain":"...","databaseURL":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}`). 배포할 때 워크플로가 자동으로 파일에 넣습니다.
 
-### 2-A. Netlify로 배포
-1. https://app.netlify.com → **Add new site → Import an existing project → GitHub** → 이 저장소 선택.
-2. Branch: `main`, Build command: 비움, Publish directory: `.` (저장소의 `netlify.toml`이 자동 적용됨).
-3. Deploy. 발급된 URL(예: `https://xxxx.netlify.app`)로 접속.
-
-### 2-B. Vercel로 배포
-1. https://vercel.com/new → 저장소 Import → Framework Preset: **Other**, Build/Output 비움 → Deploy.
+### 2. GitHub Pages 켜기 (최초 1회)
+1. 저장소 **Settings → Pages → Build and deployment → Source** 를 **GitHub Actions** 로 선택.
+2. `main` 브랜치에 푸시(또는 PR 머지)하면 `.github/workflows/deploy-pages.yml` 이 자동 실행되어 게시됩니다. **Actions** 탭에서 진행 상황을 볼 수 있고, 수동 실행은 Actions → Deploy to GitHub Pages → Run workflow.
+3. 주소: `https://<GitHub아이디>.github.io/festival/` (Settings → Pages 에 표시됨). 이 저장소는 https://xkv7.github.io/festival/ 입니다.
 
 ### 3. 행사 준비
-1. `admin.html` 접속 → **계정 60개 생성**. 계정 ID와 PIN 목록을 CSV로 내보내 접수 데스크에 비치.
-2. 컴퓨터실 PC 8대에서 `index.html`을 전체화면(F11)으로 열어 둠.
+1. `https://<주소>/admin.html` 접속 → **계정 60개 생성**. 계정 ID와 PIN 목록을 CSV로 내보내 접수 데스크에 비치.
+2. 컴퓨터실 PC 8대에서 `https://<주소>/` 를 전체화면(F11)으로 열어 둠.
 3. 학생은 계정 + PIN으로 로그인 → 로비에서 게임 → 종료 시 접수 데스크에서 정산(관리자 패널의 정산 처리).
 
 ## 칩 흐름 규칙
