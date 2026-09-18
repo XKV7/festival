@@ -539,6 +539,34 @@
       showResult('카드를 나눠주는 중...', `베팅 ${bet.toLocaleString()} 칩`, '');
       playSfx('bet');
 
+      // 목표 칩 조절: 첫 4장을 미리 뽑아 "스탠드 시 결과"로 평가하고 슈 맨 위에 배치
+      if (balancePlan(currentChips).k > 1) {
+        if (shoe.length < RESHUFFLE_AT + 10) buildShoe();
+        const drawFour = () => {
+          const pool = shoe.slice(), taken = [];
+          for (let i = 0; i < 4; i++) taken.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+          // 딜러가 17까지 받을 카드도 함께 (평가용)
+          const dh = [taken[1], taken[3]];
+          while (handTotal(dh).total < 17 || (handTotal(dh).total === 17 && handTotal(dh).soft)) {
+            const c = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]; dh.push(c); taken.push(c);
+          }
+          return taken;
+        };
+        const netOf = taken => {
+          const ph = [taken[0], taken[2]], dh = taken.slice(1, 2).concat(taken.slice(3));
+          const pBJ = isBlackjack(ph), dBJ = isBlackjack(dh.slice(0, 2));
+          if (pBJ && dBJ) return 0;
+          if (pBJ) return 1.2;
+          if (dBJ) return -1;
+          const pt = handTotal(ph).total, dt = handTotal(dh).total;
+          if (dt > 21 || pt > dt) return 1;
+          if (pt < dt) return -1;
+          return 0;
+        };
+        const chosen = steerOutcome(currentChips, drawFour, netOf);
+        chosen.forEach(c => { const i = shoe.indexOf(c); if (i >= 0) shoe.splice(i, 1); });
+        shoe.push(...chosen.slice().reverse());
+      }
       await dealTo('player');
       await dealTo('dealer');
       await dealTo('player');
