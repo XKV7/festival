@@ -318,7 +318,7 @@
 
     <div class="game-area">
       <div class="rl-title">🎡 ROULETTE</div>
-      <div class="rl-sub">미국식 38칸 (0 · 00) · 칩을 고르고 보드를 눌러 베팅 · 한 곳당 10 ~ 500 · 복수 베팅 가능</div>
+      <div class="rl-sub">미국식 38칸 (0 · 00) · 칩을 고르고 보드를 눌러 베팅 · 한 곳당 10 ~ 500 · 복수 베팅 가능 · 당첨 순이익 수수료 5%</div>
 
       <div class="rl-top">
         <div class="wheel-wrap">
@@ -683,7 +683,7 @@
         for (const [key, amt] of Object.entries(bets)) if (BET_DEFS[key].test(n)) w += amt * PAYOUT[BET_DEFS[key].type];
         return w - total;
       };
-      const number = steerOutcome(currentChips, () => Math.floor(Math.random() * 38), netFor);   // 0~36 + 00(37)
+      const number = steerOutcome(currentChips, () => Math.floor(Math.random() * 38), netFor, { bet: total });   // 0~36 + 00(37)
       await spinWheelTo(number);
 
       // 판정
@@ -697,7 +697,7 @@
           hitKeys.push(key);
         }
       }
-      const net = winnings - total;
+      const net = applyFee(winnings - total);   // 승리 순이익 수수료
 
       // 표시
       $('hubNum').textContent = numLabel(number);
@@ -715,7 +715,7 @@
       const colorKo = { red: '빨강', black: '검정', green: '초록' }[color];
       if (net > 0) {
         showResult(`🎉 ${numLabel(number)} ${colorKo} · +${net.toLocaleString()} 칩`,
-          `당첨: ${hitKeys.map(k => BET_DEFS[k].label).join(', ')} · 지급 ${winnings.toLocaleString()}`, 'result-win');
+          `당첨: ${hitKeys.map(k => BET_DEFS[k].label).join(', ')} · 지급 ${winnings.toLocaleString()} · 수수료 5% 차감`, 'result-win');
         playSfx('win');
       } else if (net === 0) {
         showResult(`${numLabel(number)} ${colorKo} · 본전`, `지급 ${winnings.toLocaleString()} = 베팅 ${total.toLocaleString()}`, 'result-win');
