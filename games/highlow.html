@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎰 하이로우 - CASINO ROYALE</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    /* ============ 하이로우 전용 스타일 ============ */
+    .hl-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .hl-sub {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    /* 상태 표시줄 */
+    .hl-status {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .hl-stat {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(212,168,67,0.2);
+      border-radius: 12px;
+      padding: 10px 18px;
+      min-width: 110px;
+      text-align: center;
+    }
+    .hl-stat .label { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; }
+    .hl-stat .value { font-size: 22px; font-weight: 900; color: var(--gold-light); }
+    .hl-stat.streak .value { color: #fff; }
+    .hl-stat.payout .value { color: var(--green); }
+
+    /* 테이블 */
+    .hl-table {
+      background: radial-gradient(ellipse at center, #16452f 0%, #0d2b1d 70%, #0a1f15 100%);
+      border: 3px solid var(--gold-dark);
+      border-radius: 24px;
+      padding: 28px 20px 22px;
+      box-shadow: var(--neon-glow), inset 0 0 40px rgba(0,0,0,0.5);
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    .hl-cards {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 26px;
+    }
+    .hl-slot { text-align: center; }
+    .hl-slot .slot-label {
+      color: rgba(255,255,255,0.55);
+      font-size: 12px;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+    }
+    .hl-vs {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--gold);
+      text-shadow: 0 0 10px var(--gold);
+    }
+
+    /* ============ 트럼프 카드 ============ */
+    .card-scene {
+      width: 110px;
+      height: 154px;
+      perspective: 800px;
+      margin: 0 auto;
+    }
+    .card {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+    }
+    .card.flipped { transform: rotateY(180deg); }
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 10px;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    }
+    .card-back {
+      background:
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 6px, transparent 6px 12px),
+        repeating-linear-gradient(-45deg, rgba(255,255,255,0.08) 0 6px, transparent 6px 12px),
+        linear-gradient(135deg, #1f3a8a, #0f1f4d);
+      border: 4px solid #fff;
+    }
+    .card-back::after {
+      content: '♠';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.35);
+      font-size: 44px;
+    }
+    .card-front {
+      background: #fff;
+      color: #111;
+      transform: rotateY(180deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Noto Sans KR', Georgia, serif;
+    }
+    .card-front.red { color: #d0202a; }
+    .card-front .corner {
+      position: absolute;
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1;
+      text-align: center;
+    }
+    .card-front .corner.tl { top: 8px; left: 9px; }
+    .card-front .corner.br { bottom: 8px; right: 9px; transform: rotate(180deg); }
+    .card-front .corner .suit { font-size: 14px; display: block; }
+    .card-front .center { font-size: 54px; line-height: 1; }
+    .card-scene.current .card-front { box-shadow: 0 0 0 3px var(--gold), 0 6px 18px rgba(0,0,0,0.5); }
+
+    .card.win-glow .card-front { box-shadow: 0 0 0 3px var(--green), 0 0 26px rgba(46,204,113,0.8); }
+    .card.lose-glow .card-front { box-shadow: 0 0 0 3px var(--red), 0 0 26px rgba(231,76,60,0.8); }
+
+    /* 카드 히스토리 */
+    .hl-history {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 18px;
+      min-height: 30px;
+    }
+    .hist-chip {
+      background: #fff;
+      color: #111;
+      border-radius: 6px;
+      padding: 3px 7px;
+      font-size: 13px;
+      font-weight: 700;
+      min-width: 34px;
+      text-align: center;
+      opacity: 0.85;
+    }
+    .hist-chip.red { color: #d0202a; }
+    .hist-chip.arrow {
+      background: transparent;
+      color: var(--gold);
+      min-width: auto;
+      padding: 3px 0;
+    }
+
+    /* 결과 */
+    .hl-result {
+      min-height: 72px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-top: 10px;
+    }
+    .result-msg { padding: 6px; }
+    .result-sub { font-size: 14px; color: var(--text-dim); }
+    .result-win.pop, .result-lose.pop { animation: pop 0.4s ease-out; }
+    @keyframes pop {
+      0%   { transform: scale(0.6); opacity: 0; }
+      70%  { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+
+    /* 액션 버튼 */
+    .hl-actions {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .btn-big {
+      font-size: 20px;
+      letter-spacing: 2px;
+      padding: 16px 44px;
+      border-radius: 50px;
+      min-width: 160px;
+    }
+    .btn-high {
+      background: linear-gradient(135deg, #2ecc71, #1e8f4e);
+      color: #fff;
+      box-shadow: 0 0 18px rgba(46,204,113,0.35);
+    }
+    .btn-high:hover { background: linear-gradient(135deg, #48e08a, #2ecc71); }
+    .btn-low {
+      background: linear-gradient(135deg, #e74c3c, #a3261a);
+      color: #fff;
+      box-shadow: 0 0 18px rgba(231,76,60,0.35);
+    }
+    .btn-low:hover { background: linear-gradient(135deg, #ff6a5a, #e74c3c); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-stop { min-width: 200px; }
+
+    .bet-label { text-align: center; color: var(--text-dim); font-size: 13px; margin-top: 10px; }
+    .bet-controls { margin: 6px 0 12px; flex-wrap: wrap; }
+    .bet-controls input::-webkit-outer-spin-button,
+    .bet-controls input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .bet-controls input[type=number] { -moz-appearance: textfield; }
+    .bet-controls input:disabled { opacity: 0.5; }
+
+    /* 배율표 */
+    .mult-table {
+      margin-top: 26px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 16px 18px;
+      border: 1px solid rgba(212,168,67,0.15);
+    }
+    .mult-table h3 { color: var(--gold); font-size: 15px; margin-bottom: 10px; letter-spacing: 2px; }
+    .mult-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+    .mult-cell {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 8px 4px;
+      text-align: center;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .mult-cell .m-streak { font-size: 11px; color: var(--text-dim); }
+    .mult-cell .m-mult { font-size: 18px; font-weight: 900; color: var(--gold-light); }
+    .mult-cell.active {
+      border-color: var(--gold);
+      background: rgba(212,168,67,0.18);
+      box-shadow: 0 0 12px rgba(212,168,67,0.4);
+    }
+    .mult-cell.passed { opacity: 0.45; }
+    .mult-note { margin-top: 10px; font-size: 12px; color: var(--text-dim); text-align: center; }
+
+    @media (max-width: 520px) {
+      .card-scene { width: 90px; height: 126px; }
+      .card-front .center { font-size: 44px; }
+      .hl-cards { gap: 14px; }
+      .btn-big { padding: 14px 26px; min-width: 130px; font-size: 18px; }
+      .mult-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-wrapper">
+    <div class="game-topbar">
+      <a href="../lobby.html" class="back-btn" id="backBtn">← 로비로</a>
+      <div class="chip-display">
+        <span class="chip-icon">🪙</span>
+        <span class="chip-amount" id="chipCount">---</span>
+      </div>
+    </div>
+
+    <div class="game-area">
+      <div class="hl-title">🃏 HIGH · LOW</div>
+      <div class="hl-sub">베팅 10 ~ 500 · 다음 카드가 높을까 낮을까? · 같은 숫자는 패배</div>
+
+      <div class="hl-status">
+        <div class="hl-stat"><div class="label">베팅</div><div class="value" id="statBet">-</div></div>
+        <div class="hl-stat streak"><div class="label">연승</div><div class="value" id="statStreak">0</div></div>
+        <div class="hl-stat"><div class="label">배율</div><div class="value" id="statMult">x1</div></div>
+        <div class="hl-stat payout"><div class="label">확정 가능</div><div class="value" id="statPayout">-</div></div>
+      </div>
+
+      <div class="hl-table">
+        <div class="hl-cards">
+          <div class="hl-slot">
+            <div class="slot-label">현재 카드</div>
+            <div class="card-scene current" id="curScene">
+              <div class="card" id="curCard">
+                <div class="card-face card-back"></div>
+                <div class="card-face card-front" id="curFront"></div>
+              </div>
+            </div>
+          </div>
+          <div class="hl-vs">VS</div>
+          <div class="hl-slot">
+            <div class="slot-label">다음 카드</div>
+            <div class="card-scene" id="nextScene">
+              <div class="card" id="nextCard">
+                <div class="card-face card-back"></div>
+                <div class="card-face card-front" id="nextFront"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hl-history" id="history"></div>
+      </div>
+
+      <div class="hl-result">
+        <div class="result-msg" id="resultMsg">베팅액을 정하고 START</div>
+        <div class="result-sub" id="resultSub">A=1 · J=11 · Q=12 · K=13</div>
+      </div>
+
+      <!-- 베팅 단계 -->
+      <div id="betPhase">
+        <div class="bet-label">베팅액</div>
+        <div class="bet-controls">
+          <button class="btn btn-outline btn-small" onclick="adjustBet(-50)">-50</button>
+          <button class="btn btn-outline btn-small" onclick="adjustBet(-10)">-10</button>
+          <input type="number" id="betAmount" value="50" min="10" max="500" step="10" onchange="clampBet()">
+          <button class="btn btn-outline btn-small" onclick="adjustBet(+10)">+10</button>
+          <button class="btn btn-outline btn-small" onclick="adjustBet(+50)">+50</button>
+          <button class="btn btn-outline btn-small" onclick="setMaxBet()">MAX</button>
+        </div>
+        <div class="hl-actions">
+          <button class="btn btn-gold btn-big" id="startBtn" onclick="startRound()">START</button>
+        </div>
+      </div>
+
+      <!-- 플레이 단계 -->
+      <div id="playPhase" style="display:none">
+        <div class="hl-actions">
+          <button class="btn btn-low btn-big" id="lowBtn" onclick="guess('low')">▼ LOW</button>
+          <button class="btn btn-high btn-big" id="highBtn" onclick="guess('high')">▲ HIGH</button>
+        </div>
+        <div class="hl-actions" style="margin-top:12px">
+          <button class="btn btn-gold btn-big btn-stop" id="stopBtn" onclick="stopRound()">STOP · 수익 확정</button>
+        </div>
+      </div>
+
+      <div class="mult-table">
+        <h3>📈 연승 배율표 (베팅액 × 배율)</h3>
+        <div class="mult-grid" id="multGrid"></div>
+        <div class="mult-note">맞추면 연승 +1 · 틀리거나 같은 숫자면 베팅액 전부 손실 · STOP으로 언제든 확정</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 파산 오버레이 -->
+  <div class="busted-overlay" id="bustedOverlay">
+    <div class="busted-icon">💀</div>
+    <div class="busted-text">파 산</div>
+    <div class="busted-sub">칩을 모두 잃었습니다.<br>접수 데스크에서 카드를 반납해주세요.</div>
+    <button class="btn btn-outline" style="margin-top:30px"
+      onclick="window.location.href='../index.html'">확인</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script>
+    // 로그인 체크
+    if (!getCurrentPlayer()) window.location.href = '../index.html';
+
+    let currentChips = 0;
+
+    // ============ 사운드 ============
+    const SFX = {
+      bet: new Audio('../sfx/bet.mp3'),
+      win: new Audio('../sfx/win.mp3'),
+      lose: new Audio('../sfx/lose.mp3'),
+      spin: new Audio('../sfx/spin.mp3'),
+      card: new Audio('../sfx/card.mp3'),
+      chip: new Audio('../sfx/chip.mp3'),
+      bust: new Audio('../sfx/bust.mp3')
+    };
+    Object.values(SFX).forEach(a => { a.volume = 0.5; a.load(); });
+    function playSfx(name) {
+      try {
+        SFX[name].currentTime = 0;
+        const p = SFX[name].play();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    }
+
+    // ============ 게임 설정 ============
+    const MIN_BET = 10;
+    const MAX_BET = 500;
+    const BET_STEP = 10;
+
+    // 연승 배율표 (6연승 이상은 x15 고정)
+    const STREAK_MULT = [1, 1.5, 2, 3, 5, 8, 15];
+    function multFor(streak) {
+      return STREAK_MULT[Math.min(streak, STREAK_MULT.length - 1)];
+    }
+
+    const RANK_LABEL = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
+    const SUITS = [
+      { s: '♠', red: false },
+      { s: '♥', red: true },
+      { s: '♦', red: true },
+      { s: '♣', red: false }
+    ];
+    function randomCard() {
+      return {
+        rank: 1 + Math.floor(Math.random() * 13),
+        suit: SUITS[Math.floor(Math.random() * SUITS.length)]
+      };
+    }
+    function rankLabel(r) { return RANK_LABEL[r] || String(r); }
+
+    // ============ 상태 ============
+    let phase = 'bet';      // bet | play | busy
+    let bet = 0;
+    let streak = 0;
+    let currentCard = null;
+    let historyCards = [];
+
+    const $ = id => document.getElementById(id);
+
+    // ============ 카드 렌더 ============
+    function renderFront(el, card) {
+      el.className = 'card-face card-front' + (card.suit.red ? ' red' : '');
+      const label = rankLabel(card.rank);
+      el.innerHTML = `
+        <div class="corner tl">${label}<span class="suit">${card.suit.s}</span></div>
+        <div class="center">${card.suit.s}</div>
+        <div class="corner br">${label}<span class="suit">${card.suit.s}</span></div>`;
+    }
+    function setFlipped(cardEl, flipped, instant) {
+      if (instant) cardEl.style.transition = 'none';
+      cardEl.classList.toggle('flipped', flipped);
+      if (instant) { void cardEl.offsetWidth; cardEl.style.transition = ''; }
+    }
+    function clearGlow() {
+      $('curCard').classList.remove('win-glow', 'lose-glow');
+      $('nextCard').classList.remove('win-glow', 'lose-glow');
+    }
+
+    function renderHistory() {
+      const box = $('history');
+      box.innerHTML = '';
+      historyCards.forEach((c, i) => {
+        if (i > 0) {
+          const a = document.createElement('span');
+          a.className = 'hist-chip arrow';
+          a.textContent = '›';
+          box.appendChild(a);
+        }
+        const chip = document.createElement('span');
+        chip.className = 'hist-chip' + (c.suit.red ? ' red' : '');
+        chip.textContent = rankLabel(c.rank) + c.suit.s;
+        box.appendChild(chip);
+      });
+    }
+
+    // ============ 상태 표시 ============
+    function renderStatus() {
+      $('statBet').textContent = phase === 'bet' ? '-' : bet.toLocaleString();
+      $('statStreak').textContent = streak;
+      $('statMult').textContent = 'x' + multFor(streak);
+      $('statPayout').textContent = (phase !== 'bet' && streak > 0)
+        ? Math.floor(bet * multFor(streak)).toLocaleString()
+        : '-';
+      document.querySelectorAll('.mult-cell').forEach(cell => {
+        const s = parseInt(cell.dataset.streak, 10);
+        cell.classList.toggle('active', phase !== 'bet' && (s === streak || (s === 6 && streak >= 6)));
+        cell.classList.toggle('passed', phase !== 'bet' && s < streak);
+      });
+    }
+
+    function showResult(msg, sub, cls) {
+      const m = $('resultMsg');
+      m.className = 'result-msg ' + (cls || '');
+      m.textContent = msg;
+      if (cls) { void m.offsetWidth; m.classList.add('pop'); }
+      $('resultSub').textContent = sub || '';
+    }
+
+    function setPhase(p) {
+      phase = p;
+      $('betPhase').style.display = p === 'bet' ? '' : 'none';
+      $('playPhase').style.display = p === 'bet' ? 'none' : '';
+      const busy = p === 'busy';
+      $('highBtn').disabled = busy;
+      $('lowBtn').disabled = busy;
+      $('stopBtn').disabled = busy || streak === 0;
+      $('betAmount').disabled = p !== 'bet';
+      updateStartButton();
+      renderStatus();
+    }
+
+    // ============ 베팅 컨트롤 ============
+    function getBet() {
+      const v = parseInt($('betAmount').value, 10);
+      return isNaN(v) ? MIN_BET : v;
+    }
+    function setBet(v) {
+      v = Math.round(v / BET_STEP) * BET_STEP;
+      v = Math.max(MIN_BET, Math.min(MAX_BET, v));
+      $('betAmount').value = v;
+      updateStartButton();
+    }
+    function adjustBet(d) { if (phase === 'bet') setBet(getBet() + d); }
+    function clampBet() { setBet(getBet()); }
+    function setMaxBet() {
+      if (phase !== 'bet') return;
+      const affordable = Math.floor(currentChips / BET_STEP) * BET_STEP;
+      setBet(Math.min(MAX_BET, Math.max(MIN_BET, affordable)));
+    }
+    function updateStartButton() {
+      const btn = $('startBtn');
+      if (currentChips < getBet()) { btn.disabled = true; btn.textContent = '칩 부족'; }
+      else { btn.disabled = false; btn.textContent = 'START'; }
+    }
+
+    // ============ 라운드 진행 ============
+    function startRound() {
+      if (phase !== 'bet') return;
+      const b = getBet();
+      if (b < MIN_BET || b > MAX_BET) { setBet(b); return; }
+      if (currentChips < b) {
+        showResult('칩이 부족합니다', `현재 ${currentChips.toLocaleString()} 칩 · 베팅 ${b}`, 'result-lose');
+        updateStartButton();
+        return;
+      }
+      bet = b;
+      streak = 0;
+      historyCards = [];
+      clearGlow();
+      playSfx('bet');
+
+      currentCard = randomCard();
+      historyCards.push(currentCard);
+      renderFront($('curFront'), currentCard);
+      setFlipped($('curCard'), false, true);
+      setFlipped($('nextCard'), false, true);
+      renderHistory();
+
+      setPhase('busy');
+      showResult('카드를 확인하세요', '다음 카드가 높을까요, 낮을까요?', '');
+      setTimeout(() => {
+        playSfx('card');
+        setFlipped($('curCard'), true);
+        setTimeout(() => setPhase('play'), 650);
+      }, 150);
+    }
+
+    async function guess(dir) {
+      if (phase !== 'play') return;
+      setPhase('busy');
+      clearGlow();
+
+      const next = randomCard();
+      renderFront($('nextFront'), next);
+      playSfx('card');
+      setFlipped($('nextCard'), true);
+      await wait(700);
+
+      const correct = (dir === 'high' && next.rank > currentCard.rank) ||
+                      (dir === 'low'  && next.rank < currentCard.rank);
+      const tie = next.rank === currentCard.rank;
+
+      if (correct) {
+        streak++;
+        $('nextCard').classList.add('win-glow');
+        playSfx('win');
+        const mult = multFor(streak);
+        showResult(
+          `✅ 정답! ${streak}연승`,
+          `현재 배율 x${mult} · 확정 시 ${Math.floor(bet * mult).toLocaleString()} 칩`,
+          'result-win'
+        );
+        renderStatus();
+        await wait(900);
+
+        // 다음 카드 → 현재 카드로 이동
+        currentCard = next;
+        historyCards.push(next);
+        renderHistory();
+        renderFront($('curFront'), currentCard);
+        clearGlow();
+        setFlipped($('nextCard'), false);
+        await wait(350);
+        setPhase('play');
+        showResult(
+          `${streak}연승 중 · x${multFor(streak)}`,
+          '계속 도전하거나 STOP으로 수익을 확정하세요',
+          ''
+        );
+      } else {
+        $('nextCard').classList.add('lose-glow');
+        historyCards.push(next);
+        renderHistory();
+        playSfx('lose');
+        const why = tie
+          ? `같은 숫자 (${rankLabel(next.rank)}) · 무조건 패배`
+          : `${rankLabel(currentCard.rank)} → ${rankLabel(next.rank)} · ${dir === 'high' ? 'HIGH' : 'LOW'} 실패`;
+        showResult('❌ 실패...', `${why} · -${bet.toLocaleString()} 칩`, 'result-lose');
+        streak = 0;
+        await settle(-bet);
+        await wait(600);
+        endRound();
+      }
+    }
+
+    async function stopRound() {
+      if (phase !== 'play' || streak === 0) return;
+      setPhase('busy');
+      const mult = multFor(streak);
+      const total = Math.floor(bet * mult);
+      const net = total - bet;
+      playSfx('chip');
+      $('curCard').classList.add('win-glow');
+      showResult(
+        `💰 수익 확정! +${net.toLocaleString()} 칩`,
+        `${streak}연승 · x${mult} · 총 ${total.toLocaleString()} 칩 획득`,
+        'result-win'
+      );
+      await settle(net);
+      await wait(400);
+      endRound();
+    }
+
+    // 베팅 차감과 지급을 합산해 한 번에 반영 (올인 후 승리 시 오파산 방지)
+    async function settle(net) {
+      if (net === 0) return;
+      try {
+        await updateChips(net);
+      } catch (e) {
+        console.error('칩 반영 실패', e);
+        showResult('⚠️ 칩 반영 오류', '네트워크를 확인하고 다시 시도하세요', 'result-lose');
+      }
+    }
+
+    function endRound() {
+      streak = 0;
+      bet = 0;
+      setPhase('bet');
+      $('resultSub').textContent += '  ·  다시 베팅하려면 START';
+    }
+
+    function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ============ 배율표 렌더 ============
+    function renderMultTable() {
+      const grid = $('multGrid');
+      grid.innerHTML = '';
+      for (let s = 1; s <= 6; s++) {
+        const cell = document.createElement('div');
+        cell.className = 'mult-cell';
+        cell.dataset.streak = s;
+        cell.innerHTML = `<div class="m-streak">${s}연승${s === 6 ? '+' : ''}</div><div class="m-mult">x${STREAK_MULT[s]}</div>`;
+        grid.appendChild(cell);
+      }
+    }
+
+    // ============ 초기화 ============
+    renderMultTable();
+    setPhase('bet');
+
+    document.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT') return;
+      if (phase === 'bet' && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); startRound(); }
+      else if (phase === 'play') {
+        if (e.code === 'ArrowUp') { e.preventDefault(); guess('high'); }
+        else if (e.code === 'ArrowDown') { e.preventDefault(); guess('low'); }
+        else if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); stopRound(); }
+      }
+    });
+
+    // 라운드 진행 중 이탈 경고 (칩 정산은 라운드 종료 시 반영되므로)
+    window.addEventListener('beforeunload', e => {
+      if (phase !== 'bet') { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // 칩 실시간 표시 + 파산 체크
+    onChipsChange(chips => {
+      currentChips = chips || 0;
+      $('chipCount').textContent = currentChips.toLocaleString();
+      if (currentChips <= 0) $('bustedOverlay').classList.add('active');
+      updateStartButton();
+    });
+  </script>
+</body>
+</html>
