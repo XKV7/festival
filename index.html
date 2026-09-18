@@ -5,13 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎰 CASINO ROYALE</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/theme.css">
 </head>
-<body>
+<body class="v2">
+  <!-- 반짝이는 동아리 배너 -->
+  <div class="ticker" id="ticker"></div>
+
   <div class="login-wrapper">
-    <h1 class="login-title">🎰 CASINO ROYALE</h1>
-    <p class="login-subtitle">경문고 축제 카지노</p>
+    <div class="brand">
+      <div class="brand-top" id="brandTop">경문고등학교 · 2026 경문제</div>
+      <div class="brand-name" id="brandName">CASINO ROYALE</div>
+      <div class="brand-sub">가상 칩으로 즐기는 <b>축제 카지노</b> · 칩이 남으면 상품 교환</div>
+      <div><span class="open-tag blink-soft">● OPEN NOW</span></div>
+    </div>
 
     <div class="login-box">
+      <div class="box-title">PLAYER LOGIN</div>
       <div class="input-group">
         <label>계정 ID</label>
         <select id="playerId">
@@ -20,18 +29,49 @@
       </div>
       <div class="input-group">
         <label>PIN</label>
-        <input type="password" id="pin" placeholder="4자리 PIN" maxlength="4" inputmode="numeric">
+        <input type="password" id="pin" placeholder="4자리 PIN" maxlength="4" inputmode="numeric" autocomplete="off">
       </div>
       <button class="btn btn-gold" style="width:100%" onclick="handleLogin()">입장하기</button>
       <p class="error-msg" id="errorMsg"></p>
+      <div class="login-help">계정과 PIN은 접수 데스크에서 받은 카드에 있습니다<br>🟢 대기 계정만 입장 가능 · 🟡 사용중 · 🔴 파산 · ✅ 정산 완료</div>
     </div>
 
+    <div class="promo-row">
+      <div class="neon-box promo">
+        <div class="inner">
+          <span class="p-tag red blink">EVENT</span>
+          <div class="p-title">첫 입장 1,000칩 지급</div>
+          <div class="p-sub">전원 동일 스타트 · 실력으로 증명</div>
+        </div>
+      </div>
+      <div class="neon-box promo">
+        <div class="inner">
+          <span class="p-tag cyan">AI DEALER</span>
+          <div class="p-title">인디언 포커 · 홀덤 AI 상시 대기</div>
+          <div class="p-sub">기다림 없이 바로 1:1 대결</div>
+        </div>
+      </div>
+      <div class="neon-box promo">
+        <div class="inner">
+          <span class="p-tag">PRIZE</span>
+          <div class="p-title">7,000칩 이상 = 잭팟 등급</div>
+          <div class="p-sub">종료 시 접수 데스크에서 상품 교환</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sponsor-line">
+      <div>PRESENTED BY</div>
+      <div class="clubs" id="sponsorClubs"></div>
+    </div>
   </div>
+
+  <div class="footer-note">본 사이트의 칩은 현금 가치가 없는 축제용 가상 포인트입니다 · 실제 금전 거래 없음</div>
 
   <!-- 파산 오버레이 -->
   <div class="busted-overlay" id="bustedOverlay">
     <div class="busted-icon">💀</div>
-    <div class="busted-text">P A S A N</div>
+    <div class="busted-text">파 산</div>
     <div class="busted-sub">칩을 모두 잃었습니다. 접수 데스크에서 카드를 반납해주세요.</div>
     <button class="btn btn-outline" style="margin-top:30px" onclick="window.location.reload()">확인</button>
   </div>
@@ -39,7 +79,14 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/site-config.js"></script>
   <script>
+    // 배너 / 브랜드 텍스트
+    buildTicker(document.getElementById('ticker'));
+    document.getElementById('brandTop').textContent = `${SITE.school} · ${SITE.festival}`;
+    document.getElementById('brandName').textContent = SITE.name;
+    document.getElementById('sponsorClubs').innerHTML = SITE.clubs.map(c => `<b>${c}</b>`).join(' · ');
+
     // 계정 목록 불러오기
     async function loadAccounts() {
       const select = document.getElementById('playerId');

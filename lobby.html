@@ -5,77 +5,123 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎰 로비 - CASINO ROYALE</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/theme.css">
 </head>
-<body>
-  <div class="container">
-    <div class="lobby-header">
-      <h1 class="lobby-title">🎰 CASINO ROYALE</h1>
-      <div class="player-info">
-        <div class="chip-display">
-          <span class="chip-icon">🪙</span>
-          <span class="chip-amount" id="chipCount">---</span>
-        </div>
-        <span class="player-id" id="playerIdDisplay"></span>
-        <button class="btn btn-outline btn-small" onclick="handleLogout()">나가기</button>
+<body class="v2">
+  <!-- 상단 내비게이션 -->
+  <div class="topnav">
+    <div class="logo" id="navLogo">🎰 CASINO ROYALE</div>
+    <div class="nav-links">
+      <a class="active" href="#games">게임</a>
+      <a href="#grades">상품 등급</a>
+    </div>
+    <div class="right">
+      <div class="chip-display">
+        <span class="chip-icon">🪙</span>
+        <span class="chip-amount" id="chipCount">---</span>
       </div>
+      <div class="player-pill">
+        <span class="grade" id="myGradeEmoji">🙂</span>
+        <span class="pid" id="playerIdDisplay"></span>
+      </div>
+      <button class="btn btn-outline btn-small" onclick="handleLogout()">나가기</button>
+    </div>
+  </div>
+
+  <!-- 반짝이는 동아리 배너 -->
+  <div class="ticker" id="ticker"></div>
+
+  <div class="container">
+    <div class="section-head" id="games">
+      <h2><span>🎲</span> 전체 게임 <span style="font-size:14px;color:var(--text-dim);font-weight:700">8종</span></h2>
+      <div class="live-pill"><span class="dot"></span> 현재 접속 <b id="liveTotal">-</b>명</div>
+    </div>
+    <div class="filter-chips" id="filterChips">
+      <button class="filter-chip active" data-filter="all">전체</button>
+      <button class="filter-chip" data-filter="테이블">테이블</button>
+      <button class="filter-chip" data-filter="카드">카드</button>
+      <button class="filter-chip" data-filter="슬롯">슬롯</button>
+      <button class="filter-chip" data-filter="AI 딜러">AI 딜러</button>
     </div>
 
-    <div class="game-grid">
-      <a class="game-card" href="games/slots.html">
-        <div class="game-icon">🎰</div>
-        <div class="game-name">슬롯머신</div>
-        <div class="game-desc">릴을 돌려 조합을 맞춰라!</div>
-        <div class="game-bet">베팅: 10~200</div>
+    <div class="game-grid-v2" id="gameGrid" style="margin-top:14px">
+      <a class="gcard" data-game="slots" href="games/slots.html">
+        <div class="thumb slots"><div class="felt"></div><div class="t-icon">🎰</div><span class="tag-diff">★☆☆</span></div>
+        <div class="road"></div>
+        <div class="gbody">
+          <div class="gname">슬롯머신</div>
+          <div class="gdesc">릴 3개를 돌려 같은 심볼을 맞춰라 · 7️⃣7️⃣7️⃣ = x50</div>
+          <div class="gmeta"><span class="min">최소 10</span><span class="users">👤 <b>-</b></span></div>
+        </div>
       </a>
+      <a class="gcard" data-game="highlow" href="games/highlow.html">
+        <div class="thumb highlow"><div class="felt"></div><div class="t-icon">🃏</div><span class="tag-diff">★☆☆</span></div>
+        <div class="road"></div>
+        <div class="gbody">
+          <div class="gname">하이로우</div>
+          <div class="gdesc">다음 카드가 높을까 낮을까 · 연승 배율 최대 x5</div>
+          <div class="gmeta"><span class="min">최소 10</span><span class="users">👤 <b>-</b></span></div>
+        </div>
+      </a>
+      <a class="gcard" data-game="roulette" href="games/roulette.html">
+        <div class="thumb roulette"><div class="felt"></div><div class="t-icon">🎡</div><span class="tag-diff">★★☆</span></div>
+        <div class="road"></div>
+        <div class="gbody">
+          <div class="gname">룰렛</div>
+          <div class="gdesc">유럽식 37칸 · 번호 적중 x35</div>
+          <div class="gmeta"><span class="min">최소 10</span><span class="users">👤 <b>-</b></span></div>
+        </div>
+      </a>
+      <a class="gcard" data-game="blackjack" href="games/blackjack.html">
+        <div class="thumb blackjack"><div class="felt"></div><div class="t-icon">🂡</div><span class="tag-diff">★★☆</span></div>
+        <div class="road"></div>
+        <div class="gbody">
+          <div class="gname">블랙잭</div>
+          <div class="gdesc">딜러를 이겨라 · 21에 가까운 쪽이 승리 · 블랙잭 x2.5</div>
+          <div class="gmeta"><span class="min">최소 20</span><span class="users">👤 <b>-</b></span></div>
+        </div>
+      </a>
+      <a class="gcard" data-game="baccarat" href="games/baccarat.html">
+        <div class="thumb baccarat"><div class="felt"></div><div class="t-icon">💎</div><span class="tag-diff">★★☆</span></div>
+        <div class="road"></div>
+        <div class="gbody">
+          <div class="gname">바카라</div>
+          <div class="gdesc">플레이어 vs 뱅커 · 9에 가까운 쪽 · 타이 x9</div>
+          <div class="gmeta"><span class="min">최소 20</span><span class="users">👤 <b>-</b></span></div>
+        </div>
+      </a>
+      <a class="gcard" data-game="sicbo" href="games/sicbo.html">
+        <div class="thumb sicbo"><div class="felt"></div><div class="t-icon">🎲</div><span class="tag-diff">★★☆</span></div>
+        <div class="road"></div>
+        <div class="gbody">
+          <div class="gname">식보</div>
+          <div class="gdesc">주사위 3개 · 대소·합·트리플 · 트리플 x150</div>
+          <div class="gmeta"><span class="min">최소 10</span><span class="users">👤 <b>-</b></span></div>
+        </div>
+      </a>
+      <a class="gcard" data-game="indian-poker" href="games/indian-poker.html">
+        <div class="thumb indian-poker"><div class="felt"></div><div class="t-icon">🪶</div><span class="tag-diff">★★★</span></div>
+        <div class="road"></div>
+        <div class="gbody">
+          <div class="gname">인디언 포커</div>
+          <div class="gdesc">상대 카드만 보이는 심리전 · 딜러 AI와 1:1</div>
+          <div class="gmeta"><span class="min">최소 50</span><span class="users">👤 <b>-</b></span></div>
+        </div>
+      </a>
+      <a class="gcard" data-game="holdem" href="games/holdem.html">
+        <div class="thumb holdem"><div class="felt"></div><div class="t-icon">♠️</div><span class="tag-diff">★★★</span></div>
+        <div class="road"></div>
+        <div class="gbody">
+          <div class="gname">텍사스 홀덤</div>
+          <div class="gdesc">포커의 꽃 · 딜러 AI와 헤즈업 노리밋</div>
+          <div class="gmeta"><span class="min">블라인드 10/20</span><span class="users">👤 <b>-</b></span></div>
+        </div>
+      </a>
+    </div>
 
-      <a class="game-card" href="games/highlow.html">
-        <div class="game-icon">🃏</div>
-        <div class="game-name">하이로우</div>
-        <div class="game-desc">다음 카드는 높을까 낮을까?</div>
-        <div class="game-bet">베팅: 10~500 | 연승 보너스</div>
-      </a>
-
-      <a class="game-card" href="games/roulette.html">
-        <div class="game-icon">🎡</div>
-        <div class="game-name">룰렛</div>
-        <div class="game-desc">번호, 색상, 홀짝에 베팅!</div>
-        <div class="game-bet">베팅: 10~500</div>
-      </a>
-
-      <a class="game-card" href="games/blackjack.html">
-        <div class="game-icon">🂡</div>
-        <div class="game-name">블랙잭</div>
-        <div class="game-desc">딜러를 이겨라! 21에 가까운 쪽이 승리</div>
-        <div class="game-bet">베팅: 20~500</div>
-      </a>
-
-      <a class="game-card" href="games/baccarat.html">
-        <div class="game-icon">💎</div>
-        <div class="game-name">바카라</div>
-        <div class="game-desc">플레이어 vs 뱅커, 9에 가까운 쪽이 승리</div>
-        <div class="game-bet">베팅: 20~500</div>
-      </a>
-
-      <a class="game-card" href="games/sicbo.html">
-        <div class="game-icon">🎲</div>
-        <div class="game-name">식보</div>
-        <div class="game-desc">주사위 3개의 합을 맞춰라!</div>
-        <div class="game-bet">베팅: 10~500</div>
-      </a>
-
-      <a class="game-card" href="games/indian-poker.html">
-        <div class="game-icon">🤠</div>
-        <div class="game-name">인디언 포커</div>
-        <div class="game-desc">상대 카드만 보이는 심리전! (2인)</div>
-        <div class="game-bet">베팅: 50~500 | PvP</div>
-      </a>
-
-      <a class="game-card" href="games/holdem.html">
-        <div class="game-icon">♠️</div>
-        <div class="game-name">텍사스 홀덤</div>
-        <div class="game-desc">포커의 꽃! (2~4인)</div>
-        <div class="game-bet">블라인드: 10/20 | PvP</div>
-      </a>
+    <div class="grade-panel" id="grades">
+      <h3>🏆 상품 등급표 · 종료 시 남은 칩 기준</h3>
+      <div class="grade-row" id="gradeRow"></div>
     </div>
   </div>
 
@@ -90,6 +136,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/site-config.js"></script>
   <script>
     const playerId = getCurrentPlayer();
     if (!playerId) {
@@ -97,13 +144,88 @@
     }
 
     document.getElementById('playerIdDisplay').textContent = playerId;
+    document.getElementById('navLogo').textContent = '🎰 ' + SITE.name;
+    buildTicker(document.getElementById('ticker'));
 
-    // 칩 실시간 표시
+    // ---- 상품 등급표 ----
+    const GRADES = [
+      { min: 0, max: 0, range: '0' },
+      { min: 1, max: 999, range: '1 ~ 999' },
+      { min: 1000, max: 1999, range: '1,000 ~ 1,999' },
+      { min: 2000, max: 3999, range: '2,000 ~ 3,999' },
+      { min: 4000, max: 6999, range: '4,000 ~ 6,999' },
+      { min: 7000, max: Infinity, range: '7,000 +' }
+    ];
+    function renderGrades(chips) {
+      const row = document.getElementById('gradeRow');
+      row.innerHTML = '';
+      GRADES.forEach(g => {
+        const info = getPrizeGrade(g.min);
+        const mine = chips !== null && chips >= g.min && chips <= g.max;
+        const cell = document.createElement('div');
+        cell.className = 'grade-cell' + (mine ? ' mine' : '');
+        cell.innerHTML = `<div class="g-emoji">${info.emoji}</div><div class="g-name">${info.grade}</div><div class="g-range">${g.range}</div><div class="g-prize">${info.prize}</div>`;
+        row.appendChild(cell);
+      });
+    }
+    renderGrades(null);
+
+    // ---- 칩 실시간 표시 ----
     onChipsChange(chips => {
-      document.getElementById('chipCount').textContent = chips.toLocaleString();
-      if (chips <= 0) {
+      const c = chips || 0;
+      document.getElementById('chipCount').textContent = c.toLocaleString();
+      document.getElementById('myGradeEmoji').textContent = getPrizeGrade(c).emoji;
+      renderGrades(c);
+      if (c <= 0) {
         document.getElementById('bustedOverlay').classList.add('active');
       }
+    });
+
+    // ---- 게임 카드 뱃지 / 최소 베팅 / 비드로드 ----
+    document.querySelectorAll('.gcard').forEach(card => {
+      const key = card.dataset.game;
+      const cfg = SITE.games[key] || {};
+      card.dataset.tag = cfg.tag || '';
+      if (cfg.badge) {
+        const b = document.createElement('span');
+        b.className = 'badge ' + cfg.badgeType;
+        b.textContent = cfg.badge;
+        card.querySelector('.thumb').appendChild(b);
+      }
+      // 미니 비드로드: 무작위 결과 패턴 (분위기용)
+      const road = card.querySelector('.road');
+      const colors = ['r', 'b', 'r', 'b', 'r', 'b', 'g', 'y', ''];
+      let html = '';
+      for (let i = 0; i < 36; i++) {
+        const c = Math.random() < 0.72 ? colors[Math.floor(Math.random() * colors.length)] : '';
+        html += `<i class="${c}"></i>`;
+      }
+      road.innerHTML = html;
+    });
+
+    // ---- 접속 인원 (분위기용 표시, 몇 초마다 조금씩 변함) ----
+    const seeds = {};
+    document.querySelectorAll('.gcard').forEach(c => { seeds[c.dataset.game] = 40 + Math.floor(Math.random() * 220); });
+    function tickUsers() {
+      let total = 0;
+      document.querySelectorAll('.gcard').forEach(c => {
+        const k = c.dataset.game;
+        seeds[k] = Math.max(12, seeds[k] + Math.floor(Math.random() * 9) - 4);
+        c.querySelector('.users b').textContent = seeds[k];
+        total += seeds[k];
+      });
+      document.getElementById('liveTotal').textContent = total.toLocaleString();
+    }
+    tickUsers();
+    setInterval(tickUsers, 4000);
+
+    // ---- 필터 ----
+    document.getElementById('filterChips').addEventListener('click', e => {
+      const btn = e.target.closest('.filter-chip');
+      if (!btn) return;
+      document.querySelectorAll('.filter-chip').forEach(b => b.classList.toggle('active', b === btn));
+      const f = btn.dataset.filter;
+      document.querySelectorAll('.gcard').forEach(c => c.classList.toggle('hidden', f !== 'all' && c.dataset.tag !== f));
     });
 
     async function handleLogout() {
