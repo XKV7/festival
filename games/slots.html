@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎰 슬롯머신 - CASINO ROYALE</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    /* ============ 슬롯머신 전용 스타일 ============ */
+    .slot-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .slot-sub {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    .slot-machine {
+      position: relative;
+      background: linear-gradient(180deg, #0d1220, #0a0e17);
+      border: 3px solid var(--gold-dark);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: var(--neon-glow), inset 0 0 30px rgba(0,0,0,0.6);
+      max-width: 460px;
+      margin: 0 auto;
+    }
+    .slot-machine.win {
+      border-color: var(--gold-light);
+      box-shadow: 0 0 35px rgba(212,168,67,0.6), inset 0 0 30px rgba(0,0,0,0.6);
+    }
+    .slot-machine.jackpot {
+      animation: frame-flash 0.5s ease-in-out infinite alternate;
+    }
+    @keyframes frame-flash {
+      from { box-shadow: 0 0 25px rgba(212,168,67,0.5), inset 0 0 30px rgba(0,0,0,0.6); border-color: var(--gold); }
+      to   { box-shadow: 0 0 60px rgba(240,214,138,0.95), inset 0 0 30px rgba(0,0,0,0.6); border-color: #fff; }
+    }
+
+    .reels {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      position: relative;
+    }
+    .reel {
+      width: 118px;
+      height: 270px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #1f2a3d 0%, #f4f4f4 18%, #ffffff 50%, #f4f4f4 82%, #1f2a3d 100%);
+      border-radius: 12px;
+      border: 2px solid #2a3650;
+      position: relative;
+      box-shadow: inset 0 8px 18px rgba(0,0,0,0.35), inset 0 -8px 18px rgba(0,0,0,0.35);
+    }
+    .reel-strip {
+      display: flex;
+      flex-direction: column;
+      will-change: transform;
+    }
+    .reel-cell {
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 54px;
+      line-height: 1;
+      user-select: none;
+    }
+    .reel.spinning .reel-strip { filter: blur(1.2px); }
+
+    /* 릴 위아래 그림자 (현재 심볼 강조) */
+    .reel::before, .reel::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 90px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .reel::before { top: 0; background: linear-gradient(180deg, rgba(10,14,23,0.75), rgba(10,14,23,0.15)); }
+    .reel::after  { bottom: 0; background: linear-gradient(0deg, rgba(10,14,23,0.75), rgba(10,14,23,0.15)); }
+
+    /* 페이라인 */
+    .payline {
+      position: absolute;
+      left: -8px; right: -8px;
+      top: 50%;
+      height: 94px;
+      transform: translateY(-50%);
+      border-top: 2px solid rgba(212,168,67,0.7);
+      border-bottom: 2px solid rgba(212,168,67,0.7);
+      pointer-events: none;
+      z-index: 3;
+    }
+    .payline::before, .payline::after {
+      content: '▶';
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gold);
+      font-size: 16px;
+      text-shadow: 0 0 8px var(--gold);
+    }
+    .payline::before { left: -16px; }
+    .payline::after  { right: -16px; content: '◀'; }
+
+    /* 당첨 심볼 반짝임 */
+    .reel.hit .reel-cell.center {
+      animation: symbol-blink 0.35s ease-in-out 6;
+    }
+    @keyframes symbol-blink {
+      0%, 100% { transform: scale(1);   filter: drop-shadow(0 0 0 transparent); }
+      50%      { transform: scale(1.25); filter: drop-shadow(0 0 14px var(--gold-light)); }
+    }
+
+    .slot-result {
+      min-height: 72px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 0 0;
+    }
+    .result-msg { padding: 6px; }
+    .result-sub {
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+    .result-win.pop { animation: pop 0.4s ease-out; }
+    @keyframes pop {
+      0%   { transform: scale(0.6); opacity: 0; }
+      70%  { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+
+    .bet-label {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+    .bet-controls { margin: 6px 0 14px; flex-wrap: wrap; }
+    .bet-controls input::-webkit-outer-spin-button,
+    .bet-controls input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .bet-controls input[type=number] { -moz-appearance: textfield; }
+
+    .spin-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    .btn-spin {
+      font-size: 22px;
+      letter-spacing: 3px;
+      padding: 16px 60px;
+      border-radius: 50px;
+    }
+    .btn-spin:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .spin-hint {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    /* 배당표 */
+    .paytable {
+      margin-top: 28px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 16px 18px;
+      border: 1px solid rgba(212,168,67,0.15);
+    }
+    .paytable h3 {
+      color: var(--gold);
+      font-size: 15px;
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+    }
+    .paytable-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 6px 14px;
+    }
+    .pay-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .pay-row .pay-combo { font-size: 18px; letter-spacing: 2px; }
+    .pay-row .pay-mult  { color: var(--gold-light); font-weight: 700; }
+    .pay-row.hit {
+      background: rgba(212,168,67,0.2);
+      box-shadow: 0 0 12px rgba(212,168,67,0.4);
+    }
+    .pay-row.wide { grid-column: 1 / -1; }
+
+    @media (max-width: 520px) {
+      .reel { width: 88px; height: 210px; }
+      .reel-cell { height: 70px; font-size: 42px; }
+      .reel::before, .reel::after { height: 70px; }
+      .payline { height: 74px; }
+      .btn-spin { padding: 14px 40px; font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-wrapper">
+    <div class="game-topbar">
+      <a href="../lobby.html" class="back-btn">← 로비로</a>
+      <div class="chip-display">
+        <span class="chip-icon">🪙</span>
+        <span class="chip-amount" id="chipCount">---</span>
+      </div>
+    </div>
+
+    <div class="game-area">
+      <div class="slot-title">🎰 SLOT MACHINE</div>
+      <div class="slot-sub">베팅 10 ~ 200 · 같은 심볼 3개 = 잭팟 · 2개 일치 = 본전</div>
+
+      <div class="slot-machine" id="slotMachine">
+        <div class="reels">
+          <div class="reel" id="reel0"><div class="reel-strip"></div></div>
+          <div class="reel" id="reel1"><div class="reel-strip"></div></div>
+          <div class="reel" id="reel2"><div class="reel-strip"></div></div>
+          <div class="payline"></div>
+        </div>
+      </div>
+
+      <div class="slot-result">
+        <div class="result-msg" id="resultMsg">행운을 빌어요!</div>
+        <div class="result-sub" id="resultSub">베팅액을 정하고 SPIN을 누르세요</div>
+      </div>
+
+      <div class="bet-label">베팅액</div>
+      <div class="bet-controls">
+        <button class="btn btn-outline btn-small" onclick="adjustBet(-50)">-50</button>
+        <button class="btn btn-outline btn-small" onclick="adjustBet(-10)">-10</button>
+        <input type="number" id="betAmount" value="50" min="10" max="200" step="10" onchange="clampBet()">
+        <button class="btn btn-outline btn-small" onclick="adjustBet(+10)">+10</button>
+        <button class="btn btn-outline btn-small" onclick="adjustBet(+50)">+50</button>
+        <button class="btn btn-outline btn-small" onclick="setMaxBet()">MAX</button>
+      </div>
+
+      <div class="spin-row">
+        <button class="btn btn-gold btn-spin" id="spinBtn" onclick="spin()">SPIN</button>
+      </div>
+      <div class="spin-hint">스페이스바로도 SPIN 할 수 있어요</div>
+
+      <div class="paytable">
+        <h3>💰 배당표 (베팅액 × 배수)</h3>
+        <div class="paytable-grid" id="paytable"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 파산 오버레이 -->
+  <div class="busted-overlay" id="bustedOverlay">
+    <div class="busted-icon">💀</div>
+    <div class="busted-text">파 산</div>
+    <div class="busted-sub">칩을 모두 잃었습니다.<br>접수 데스크에서 카드를 반납해주세요.</div>
+    <button class="btn btn-outline" style="margin-top:30px"
+      onclick="window.location.href='../index.html'">확인</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script>
+    // 로그인 체크
+    if (!getCurrentPlayer()) window.location.href = '../index.html';
+
+    let currentChips = 0;
+
+    // ============ 사운드 ============
+    const SFX = {
+      bet: new Audio('../sfx/bet.mp3'),
+      win: new Audio('../sfx/win.mp3'),
+      lose: new Audio('../sfx/lose.mp3'),
+      spin: new Audio('../sfx/spin.mp3'),
+      card: new Audio('../sfx/card.mp3'),
+      chip: new Audio('../sfx/chip.mp3'),
+      bust: new Audio('../sfx/bust.mp3')
+    };
+    Object.values(SFX).forEach(a => { a.volume = 0.5; a.load(); });
+    function playSfx(name) {
+      try {
+        SFX[name].currentTime = 0;
+        const p = SFX[name].play();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    }
+
+    // ============ 게임 설정 ============
+    const MIN_BET = 10;
+    const MAX_BET = 200;
+    const BET_STEP = 10;
+
+    const SYMBOLS = ['🍒', '🍋', '🍊', '🍇', '⭐', '💎', '7️⃣'];
+
+    // 가중치 (하우스 엣지 ~17%)
+    const REEL_WEIGHTS = {
+      '🍒': 30,
+      '🍋': 25,
+      '🍊': 20,
+      '🍇': 12,
+      '⭐': 8,
+      '💎': 4,
+      '7️⃣': 1
+    };
+
+    // 3개 일치 배당 (베팅액 기준 배수)
+    const TRIPLE_PAYOUT = {
+      '7️⃣': 50,
+      '💎': 20,
+      '⭐': 15,
+      '🍇': 10,
+      '🍊': 8,
+      '🍋': 5,
+      '🍒': 3
+    };
+    const PAIR_PAYOUT = 1; // 아무거나 2개 일치 = 본전
+
+    const TOTAL_WEIGHT = Object.values(REEL_WEIGHTS).reduce((a, b) => a + b, 0);
+    function weightedRandomSymbol() {
+      let r = Math.random() * TOTAL_WEIGHT;
+      for (const s of SYMBOLS) {
+        r -= REEL_WEIGHTS[s];
+        if (r < 0) return s;
+      }
+      return SYMBOLS[0];
+    }
+    function uniformRandomSymbol() {
+      return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+    }
+
+    // ============ 릴 상태 ============
+    const REEL_COUNT = 3;
+    const reels = [];         // { el, strip, visible: [위, 가운데, 아래] }
+    let spinning = false;
+
+    function cellHeight() {
+      return reels[0].el.clientHeight / 3;
+    }
+
+    function renderStrip(reel, symbols, centerIndex) {
+      reel.strip.innerHTML = '';
+      symbols.forEach((s, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'reel-cell' + (i === centerIndex ? ' center' : '');
+        cell.textContent = s;
+        reel.strip.appendChild(cell);
+      });
+    }
+
+    function initReels() {
+      for (let i = 0; i < REEL_COUNT; i++) {
+        const el = document.getElementById('reel' + i);
+        const reel = {
+          el,
+          strip: el.querySelector('.reel-strip'),
+          visible: [uniformRandomSymbol(), uniformRandomSymbol(), uniformRandomSymbol()]
+        };
+        reels.push(reel);
+        renderStrip(reel, reel.visible, 1);
+        reel.strip.style.transition = 'none';
+        reel.strip.style.transform = 'translateY(0)';
+      }
+    }
+
+    // 릴 하나 회전: 최종 심볼이 가운데 오도록 스트립을 만들어 아래로 스크롤
+    function spinReel(reel, finalSymbol, duration, fillerCount) {
+      return new Promise(resolve => {
+        const finalVisible = [uniformRandomSymbol(), finalSymbol, uniformRandomSymbol()];
+        const filler = [];
+        for (let i = 0; i < fillerCount; i++) filler.push(uniformRandomSymbol());
+
+        const strip = [...reel.visible, ...filler, ...finalVisible];
+        const centerIndex = strip.length - 2;
+        renderStrip(reel, strip, centerIndex);
+
+        const h = cellHeight();
+        const offset = (strip.length - 3) * h;
+
+        reel.strip.style.transition = 'none';
+        reel.strip.style.transform = 'translateY(0)';
+        reel.el.classList.add('spinning');
+        reel.el.classList.remove('hit');
+
+        // 리플로우 후 트랜지션 시작
+        void reel.strip.offsetHeight;
+        reel.strip.style.transition = `transform ${duration}ms cubic-bezier(0.12, 0.8, 0.25, 1)`;
+        reel.strip.style.transform = `translateY(-${offset}px)`;
+
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          reel.visible = finalVisible;
+          reel.strip.style.transition = 'none';
+          renderStrip(reel, reel.visible, 1);
+          reel.strip.style.transform = 'translateY(0)';
+          reel.el.classList.remove('spinning');
+          playSfx('chip');
+          resolve();
+        };
+        reel.strip.addEventListener('transitionend', finish, { once: true });
+        setTimeout(finish, duration + 120); // transitionend 누락 대비
+      });
+    }
+
+    // ============ 베팅 컨트롤 ============
+    function getBet() {
+      const v = parseInt(document.getElementById('betAmount').value, 10);
+      return isNaN(v) ? MIN_BET : v;
+    }
+    function setBet(v) {
+      v = Math.round(v / BET_STEP) * BET_STEP;
+      v = Math.max(MIN_BET, Math.min(MAX_BET, v));
+      document.getElementById('betAmount').value = v;
+      updateSpinButton();
+    }
+    function adjustBet(delta) {
+      if (spinning) return;
+      setBet(getBet() + delta);
+    }
+    function clampBet() { setBet(getBet()); }
+    function setMaxBet() {
+      if (spinning) return;
+      const maxAffordable = Math.floor(currentChips / BET_STEP) * BET_STEP;
+      setBet(Math.min(MAX_BET, Math.max(MIN_BET, maxAffordable)));
+    }
+
+    function updateSpinButton() {
+      const btn = document.getElementById('spinBtn');
+      const bet = getBet();
+      if (spinning) { btn.disabled = true; btn.textContent = '...'; return; }
+      if (currentChips < bet) {
+        btn.disabled = true;
+        btn.textContent = '칩 부족';
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'SPIN';
+      }
+    }
+
+    // ============ 결과 판정 ============
+    function evaluate(result, bet) {
+      const [a, b, c] = result;
+      if (a === b && b === c) {
+        return { type: 'triple', symbol: a, mult: TRIPLE_PAYOUT[a], payout: bet * TRIPLE_PAYOUT[a], hits: [0, 1, 2] };
+      }
+      if (a === b) return { type: 'pair', mult: PAIR_PAYOUT, payout: bet * PAIR_PAYOUT, hits: [0, 1] };
+      if (b === c) return { type: 'pair', mult: PAIR_PAYOUT, payout: bet * PAIR_PAYOUT, hits: [1, 2] };
+      if (a === c) return { type: 'pair', mult: PAIR_PAYOUT, payout: bet * PAIR_PAYOUT, hits: [0, 2] };
+      return { type: 'lose', mult: 0, payout: 0, hits: [] };
+    }
+
+    function showResult(msg, sub, cls) {
+      const m = document.getElementById('resultMsg');
+      m.className = 'result-msg ' + (cls || '');
+      m.textContent = msg;
+      if (cls === 'result-win') {
+        void m.offsetWidth;
+        m.classList.add('pop');
+      }
+      document.getElementById('resultSub').textContent = sub || '';
+    }
+
+    function highlightPayRow(key) {
+      document.querySelectorAll('.pay-row').forEach(r => r.classList.remove('hit'));
+      if (!key) return;
+      const row = document.querySelector(`.pay-row[data-key="${key}"]`);
+      if (row) row.classList.add('hit');
+    }
+
+    // ============ 스핀 ============
+    async function spin() {
+      if (spinning) return;
+      const bet = getBet();
+      if (bet < MIN_BET || bet > MAX_BET) { setBet(bet); return; }
+      if (currentChips < bet) {
+        showResult('칩이 부족합니다', `현재 ${currentChips.toLocaleString()} 칩 · 베팅 ${bet}`, 'result-lose');
+        updateSpinButton();
+        return;
+      }
+
+      spinning = true;
+      updateSpinButton();
+      document.getElementById('betAmount').disabled = true;
+
+      const machine = document.getElementById('slotMachine');
+      machine.classList.remove('win', 'jackpot');
+      highlightPayRow(null);
+      showResult('🎰 돌아가는 중...', `베팅 ${bet.toLocaleString()} 칩`, '');
+      playSfx('bet');
+      playSfx('spin');
+
+      // 결과 미리 결정 (가중치 랜덤)
+      const result = [weightedRandomSymbol(), weightedRandomSymbol(), weightedRandomSymbol()];
+
+      // 릴별 0.5초 간격 순차 정지
+      await Promise.all(reels.map((reel, i) =>
+        spinReel(reel, result[i], 1200 + i * 500, 14 + i * 6)
+      ));
+
+      // 판정 + 칩 정산 (베팅 차감과 지급을 합산해 한 번에 반영 → 올인 후 승리 시 오파산 방지)
+      const r = evaluate(result, bet);
+      const net = r.payout - bet;
+
+      r.hits.forEach(i => reels[i].el.classList.add('hit'));
+
+      if (r.type === 'triple') {
+        machine.classList.add('win');
+        if (r.symbol === '7️⃣') machine.classList.add('jackpot');
+        highlightPayRow('t-' + r.symbol);
+        const label = r.symbol === '7️⃣' ? '🎉 JACKPOT!!! 🎉' : `🎉 ${r.symbol}${r.symbol}${r.symbol} 대당첨!`;
+        showResult(label, `x${r.mult} · +${net.toLocaleString()} 칩`, 'result-win');
+        playSfx('win');
+      } else if (r.type === 'pair') {
+        highlightPayRow('pair');
+        showResult('2개 일치 · 본전!', `베팅 ${bet.toLocaleString()} 칩 반환`, 'result-win');
+        playSfx('chip');
+      } else {
+        showResult('꽝...', `-${bet.toLocaleString()} 칩`, 'result-lose');
+        playSfx('lose');
+      }
+
+      if (net !== 0) {
+        try {
+          await updateChips(net);
+        } catch (e) {
+          console.error('칩 반영 실패', e);
+          showResult('⚠️ 칩 반영 오류', '네트워크를 확인하고 다시 시도하세요', 'result-lose');
+        }
+      }
+
+      spinning = false;
+      document.getElementById('betAmount').disabled = false;
+      updateSpinButton();
+    }
+
+    // ============ 배당표 렌더 ============
+    function renderPaytable() {
+      const box = document.getElementById('paytable');
+      box.innerHTML = '';
+      Object.entries(TRIPLE_PAYOUT).forEach(([sym, mult]) => {
+        const row = document.createElement('div');
+        row.className = 'pay-row';
+        row.dataset.key = 't-' + sym;
+        row.innerHTML = `<span class="pay-combo">${sym}${sym}${sym}</span><span class="pay-mult">x${mult}</span>`;
+        box.appendChild(row);
+      });
+      const pair = document.createElement('div');
+      pair.className = 'pay-row wide';
+      pair.dataset.key = 'pair';
+      pair.innerHTML = `<span>아무거나 2개 일치</span><span class="pay-mult">x1 (본전)</span>`;
+      box.appendChild(pair);
+    }
+
+    // ============ 초기화 ============
+    initReels();
+    renderPaytable();
+    updateSpinButton();
+
+    // 칩 실시간 표시 + 파산 체크
+    onChipsChange(chips => {
+      currentChips = chips || 0;
+      document.getElementById('chipCount').textContent = currentChips.toLocaleString();
+      if (currentChips <= 0) document.getElementById('bustedOverlay').classList.add('active');
+      updateSpinButton();
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        spin();
+      }
+    });
+  </script>
+</body>
+</html>
