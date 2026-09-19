@@ -322,6 +322,90 @@
         </div>
         <p>대/소·홀/짝은 트리플이 나오면 패배 · 싱글은 해당 숫자 개수만큼 원금 배로 지급 (1개 = 1:1, 2개 = 2:1, 3개 = 3:1)</p>
       </div>
+
+      <details class="rules" open>
+        <summary>📖 식보 규칙 · 진행 방식</summary>
+        <div class="rules-body">
+        <div class="rules-sec">
+          <h4>진행 방식</h4>
+          <ol>
+            <li>칩 종류를 고르고 보드의 원하는 칸을 클릭해 베팅합니다. <b>한 곳당 10 ~ 500칩</b>, 여러 곳 동시 가능. 우클릭으로 취소.</li>
+            <li><b>ROLL</b>(또는 스페이스바)을 누르면 주사위 3개가 굴러갑니다.</li>
+            <li>나온 눈 3개로 모든 베팅을 한 번에 판정하고, 당첨된 지급액을 합산해 손익이 반영됩니다.</li>
+          </ol>
+        </div>
+        <div class="rules-sec">
+          <h4>기본 용어</h4>
+          <ul>
+            <li>주사위 3개의 눈을 더한 값이 <b>합</b>입니다. 3 ~ 18.</li>
+            <li>세 눈이 모두 같으면 <b>트리플</b>입니다. (예: 4-4-4)</li>
+            <li><b>대(大)</b>는 합 11~17, <b>소(小)</b>는 합 4~10입니다.</li>
+          </ul>
+        </div>
+        <div class="rules-sec">
+          <h4>베팅 종류와 배당</h4>
+          <table class="rules-table">
+            <tr><th>베팅</th><th>내용</th><th>배당 (총 지급)</th></tr>
+            <tr><td><b>대 · 소</b></td><td>합 11~17 / 합 4~10</td><td><b>x2</b></td></tr>
+            <tr><td><b>홀 · 짝</b></td><td>합이 홀수 / 짝수</td><td><b>x2</b></td></tr>
+            <tr><td><b>싱글</b> (1~6)</td><td>고른 숫자가 1개 나옴</td><td><b>x2</b></td></tr>
+            <tr><td></td><td>2개 나옴</td><td><b>x3</b></td></tr>
+            <tr><td></td><td>3개 나옴</td><td><b>x4</b></td></tr>
+            <tr><td><b>더블</b> (1~6)</td><td>고른 숫자가 2개 이상 나옴</td><td><b>x8</b></td></tr>
+            <tr><td><b>애니 트리플</b></td><td>아무 숫자나 트리플</td><td><b>x24</b></td></tr>
+            <tr><td><b>지정 트리플</b> (1~6)</td><td>고른 숫자로 트리플</td><td><b>x150</b></td></tr>
+            <tr><td><b>합 4 · 17</b></td><td></td><td><b>x50</b></td></tr>
+            <tr><td><b>합 5 · 16</b></td><td></td><td><b>x18</b></td></tr>
+            <tr><td><b>합 6 · 15</b></td><td></td><td><b>x14</b></td></tr>
+            <tr><td><b>합 7 · 14</b></td><td></td><td><b>x12</b></td></tr>
+            <tr><td><b>합 8 · 13</b></td><td></td><td><b>x8</b></td></tr>
+            <tr><td><b>합 9 ~ 12</b></td><td></td><td><b>x6</b></td></tr>
+          </table>
+          <ul style="margin-top:8px">
+            <li><span class="warn">트리플이 나오면 대·소·홀·짝은 모두 집니다.</span> 합이 어느 쪽이든 상관없습니다. 이것이 식보의 하우스 엣지입니다.</li>
+            <li>합 3과 18에는 걸 수 없습니다. 지정 트리플로 거세요.</li>
+            <li>배당은 <b>베팅액을 포함한 총 지급액</b>입니다.</li>
+          </ul>
+        </div>
+        <div class="rules-sec">
+          <h4>한 판 지급 한도 (테이블 리밋)</h4>
+          <ul>
+            <li>한 판에 받을 수 있는 배율에 한도가 있습니다. 여기서 배율은 <b>이번 판 총 지급액 ÷ 이번 판 총 베팅액</b>입니다.</li>
+            <li>크게 걸수록 한도가 낮아집니다. 한도를 넘는 결과는 <span class="warn">아예 나오지 않습니다.</span></li>
+            <li>여러 곳에 나눠 걸면 총 베팅이 늘어 지급 비율이 낮아지므로, 오히려 한도에 걸리지 않을 수 있습니다.</li>
+          </ul>
+          <table class="rules-table">
+            <tr><th>이번 판 총 베팅</th><th>허용 배율</th></tr>
+            <tr><td>99칩 이하</td><td><b>제한 없음</b></td></tr>
+            <tr><td>100 ~ 119칩</td><td><b>x50 미만</b></td></tr>
+            <tr><td>120 ~ 159칩</td><td><b>x40 미만</b></td></tr>
+            <tr><td>160 ~ 189칩</td><td><b>x30 미만</b></td></tr>
+            <tr><td>190 ~ 229칩</td><td><b>x25 미만</b></td></tr>
+            <tr><td>230 ~ 319칩</td><td><b>x20 미만</b></td></tr>
+            <tr><td>320 ~ 399칩</td><td><b>x15 미만</b></td></tr>
+            <tr><td>400 ~ 469칩</td><td><b>x12 미만</b></td></tr>
+            <tr><td>470 ~ 499칩</td><td><b>x10 미만</b></td></tr>
+            <tr><td>500칩 이상</td><td><b>x9 미만</b></td></tr>
+          </table>
+          <table class="rules-table" style="margin-top:10px">
+            <tr><th>베팅</th><th>배당</th><th>한 곳에만 걸 때 총 베팅 한계</th></tr>
+            <tr><td>지정 트리플</td><td>x150</td><td><b>90칩까지</b></td></tr>
+            <tr><td>합 4 · 17</td><td>x50</td><td><b>90칩까지</b></td></tr>
+            <tr><td>애니 트리플</td><td>x24</td><td><b>220칩까지</b></td></tr>
+            <tr><td>합 5 · 16</td><td>x18</td><td><b>310칩까지</b></td></tr>
+            <tr><td>합 6 · 15</td><td>x14</td><td><b>390칩까지</b></td></tr>
+            <tr><td>합 7 · 14</td><td>x12</td><td><b>390칩까지</b></td></tr>
+          </table>
+          <ul style="margin-top:8px">
+            <li>배당이 높은 베팅일수록 한도에 먼저 걸립니다. 아래는 <b>그 베팅 한 곳에만 걸었을 때</b> 당첨이 가능한 총 베팅 한계입니다. 다른 곳에도 함께 걸어 총 베팅을 늘리면 지급 비율이 내려가 한계가 풀립니다. 더블(x8), 싱글, 대·소, 홀·짝, 합 8~13은 한도와 무관합니다.</li>
+          </ul>
+        </div>
+        <div class="rules-note">
+          <b>수수료 5%</b> · 이긴 판의 <b>순이익</b>에서 5%를 뗍니다. 잃거나 본전인 판에는 붙지 않습니다.
+          (예: 100칩을 걸어 300칩을 받으면 순이익 200칩 중 10칩을 떼고 <b>+190칩</b>)
+        </div>
+        </div>
+      </details>
     </div>
   </div>
 
