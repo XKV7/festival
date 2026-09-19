@@ -357,6 +357,51 @@
         <div class="mult-grid" id="multGrid"></div>
         <div class="mult-note">맞추면 연승 +1 · 틀리면 베팅액 전부 손실 · STOP으로 언제든 확정 (1연승은 본전) · 확정 순이익 수수료 5%</div>
       </div>
+
+      <details class="rules" open>
+        <summary>📖 하이로우 규칙 · 진행 방식</summary>
+        <div class="rules-body">
+        <div class="rules-sec">
+          <h4>진행 방식</h4>
+          <ol>
+            <li>베팅액을 정하고 <b>START</b>를 누릅니다. <b>10 ~ 300칩</b>, 10칩 단위.</li>
+            <li>카드 1장이 공개됩니다. 이 카드가 <b>기준 카드</b>입니다.</li>
+            <li>다음 카드가 기준보다 높을지 낮을지 골라 <b>HIGH</b> 또는 <b>LOW</b>를 누릅니다.</li>
+            <li><span class="good">맞히면 연승이 1 올라가고</span> 방금 뒤집은 카드가 새 기준 카드가 됩니다. 계속 이어갈 수 있습니다.</li>
+            <li><span class="warn">틀리면 그 즉시 베팅액을 전부 잃고</span> 판이 끝납니다.</li>
+            <li><b>STOP</b>을 누르면 그때까지의 연승 배율로 수익을 확정합니다. 1연승부터 누를 수 있습니다.</li>
+          </ol>
+        </div>
+        <div class="rules-sec">
+          <h4>카드와 판정</h4>
+          <ul>
+            <li>카드는 <b>A(1)부터 K(13)</b>까지입니다. A=1, J=11, Q=12, K=13. 무늬는 판정과 상관없습니다.</li>
+            <li><b>다음 카드는 기준 카드와 절대 같은 숫자가 나오지 않습니다.</b> 무승부가 없으므로 HIGH/LOW 중 하나는 반드시 맞습니다.</li>
+            <li>기준이 A(1)이면 HIGH가 100% 적중, K(13)이면 LOW가 100% 적중입니다. 대신 <b>1연승 배율은 x1.0(본전)</b>이라 한 번만 맞혀서는 이익이 없습니다.</li>
+          </ul>
+        </div>
+        <div class="rules-sec">
+          <h4>연승 배율</h4>
+          <table class="rules-table">
+            <tr><th>연승</th><th>배율 (총 지급)</th><th>100칩 기준 순이익</th></tr>
+            <tr><td>1연승</td><td>x1.0</td><td>0 (본전)</td></tr>
+            <tr><td>2연승</td><td><b>x1.25</b></td><td>+25</td></tr>
+            <tr><td>3연승</td><td><b>x1.6</b></td><td>+60</td></tr>
+            <tr><td>4연승</td><td><b>x2.0</b></td><td>+100</td></tr>
+            <tr><td>5연승</td><td><b>x2.6</b></td><td>+160</td></tr>
+            <tr><td>6연승 이상</td><td><b>x3.5</b></td><td>+250</td></tr>
+          </table>
+          <ul style="margin-top:8px">
+            <li>배율은 <b>베팅액을 포함한 총 지급액</b> 기준입니다. 7연승 이상도 배율은 x3.5로 같으니, <b>6연승에서 STOP</b>하는 것이 가장 효율적입니다.</li>
+            <li>확정하지 않고 계속 가다가 틀리면 쌓아둔 배율이 <span class="warn">한 번에 전부 사라집니다.</span></li>
+          </ul>
+        </div>
+        <div class="rules-note">
+          <b>수수료 5%</b> · 이긴 판의 <b>순이익</b>에서 5%를 뗍니다. 잃거나 본전인 판에는 붙지 않습니다.
+          (예: 100칩을 걸어 300칩을 받으면 순이익 200칩 중 10칩을 떼고 <b>+190칩</b>) 하이로우는 STOP으로 확정할 때 한 번만 붙습니다.
+        </div>
+        </div>
+      </details>
     </div>
   </div>
 
