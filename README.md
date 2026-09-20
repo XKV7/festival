@@ -97,4 +97,13 @@ sfx/                (선택) bet/win/lose/spin/card/chip/bust.mp3 를 넣으면 
 
 위 표는 승률 조절·수수료를 적용하기 전의 게임 자체 엣지입니다. 실제 기대 손실은 하우스 조절기 항목대로 더 큽니다.
 
-딜러 이름은 `js/site-config.js`의 `dealer` 값으로 모든 게임에 표시됩니다.
+학교명·축제명·딜러 이름·주최 동아리·배너 동아리 목록은 모두 `js/site-config.js` 한 파일에서 바꿉니다.
+
+| 값 | 쓰이는 곳 |
+|---|---|
+| `school` · `festival` | 로그인 화면 상단 (경문고등학교 · 2026 송림제) |
+| `name` | 사이트 이름 (CASINO ROYALE), 모든 게임 상단바 |
+| `dealer` | 모든 게임의 딜러 이름 |
+| `presenter` | 로그인 화면 PRESENTED BY |
+| `clubs` | 흐르는 배너에 나오는 동아리 이름 |
+| `hype` | 배너에 섞이는 홍보 문구 |
