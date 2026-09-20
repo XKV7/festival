@@ -13,7 +13,7 @@
 
   <div class="login-wrapper">
     <div class="brand">
-      <div class="brand-top" id="brandTop">경문고등학교 · 2026 경문제</div>
+      <div class="brand-top" id="brandTop">경문고등학교 · 2026 송림제</div>
       <div class="brand-name" id="brandName">CASINO ROYALE</div>
       <div class="brand-sub">가상 칩으로 즐기는 <b>축제 카지노</b> · 칩이 남으면 상품 교환</div>
       <div><span class="open-tag blink-soft">● OPEN NOW</span></div>
@@ -85,7 +85,7 @@
     buildTicker(document.getElementById('ticker'));
     document.getElementById('brandTop').textContent = `${SITE.school} · ${SITE.festival}`;
     document.getElementById('brandName').textContent = SITE.name;
-    document.getElementById('sponsorClubs').innerHTML = SITE.clubs.map(c => `<b>${c}</b>`).join(' · ');
+    document.getElementById('sponsorClubs').innerHTML = `<b>${SITE.presenter}</b>`;
 
     // 계정 목록 불러오기
     async function loadAccounts() {

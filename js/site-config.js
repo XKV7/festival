@@ -2,8 +2,9 @@
 const SITE = {
   name: 'CASINO ROYALE',
   school: '경문고등학교',
-  festival: '2026 경문제',
+  festival: '2026 송림제',
   dealer: '임태현',          // 모든 게임의 딜러 이름 (선생님 요청)
+  presenter: 'CLASSIFIED',   // 로그인 화면 PRESENTED BY 에 표시할 주최 동아리
 
   // 배너에 흐르는 동아리 이름 (경문고 동아리 28개)
   clubs: [
