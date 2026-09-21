@@ -43,7 +43,8 @@ sfx/                (선택) bet/win/lose/spin/card/chip/bust.mp3 를 넣으면 
 3. 주소: `https://<GitHub아이디>.github.io/festival/` (Settings → Pages 에 표시됨). 이 저장소는 https://xkv7.github.io/festival/ 입니다.
 
 ### 3. 행사 준비
-1. 계정 생성: Actions 탭 → **Generate accounts** → Run workflow (기본값 그대로). 실행이 끝나면 아티팩트 `accounts-csv`에 계정·PIN 목록이 들어 있습니다. 관리자 페이지(`admin-7c2e9f.html`, 스태프만 주소 공유)의 "계정 60개 생성" 버튼으로도 됩니다. 계정 ID와 PIN 목록을 CSV로 내보내 접수 데스크에 비치.
+1. 계정 생성: 관리자 페이지(`admin-7c2e9f.html`, 스태프만 주소 공유)의 **계정 생성 / 삭제** 패널에서 개수와 시작 번호를 정해 만듭니다. PIN 은 4자리 무작위로 새로 만들어집니다. 이미 있는 번호는 기본적으로 건너뛰고, "기존 계정 덮어쓰기"를 체크하면 칩과 PIN 을 초기화하며 덮어씁니다. GitHub Actions 탭의 **Generate accounts** 워크플로로도 되며, 그쪽은 아티팩트 `accounts-csv` 에 목록이 남습니다. 계정 ID 와 PIN 목록은 정산표 내보내기로 CSV 로 뽑아 접수 데스크에 비치.
+   - 계정 삭제는 표 맨 오른쪽 **삭제** 버튼, 전부 지우려면 패널의 **전체 계정 삭제**. 되돌릴 수 없으니 행사 중에는 쓰지 마세요.
 2. 컴퓨터실 PC 8대에서 `https://<주소>/` 를 전체화면(F11)으로 열어 둠.
 3. 학생은 계정 + PIN으로 로그인 → 로비에서 게임 → 종료 시 접수 데스크에서 정산(관리자 패널의 정산 처리).
 
