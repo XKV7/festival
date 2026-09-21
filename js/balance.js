@@ -15,7 +15,8 @@ const BALANCE = {
     [500, 9], [470, 10], [400, 12], [320, 15], [230, 20],
     [190, 25], [160, 30], [120, 40], [100, 50]
   ],
-  fee: 0.05              // 승리 순이익 수수료
+  fee: 0.05,             // 승리 순이익 수수료
+  maxWin: 4300           // 한 판(한 라운드·한 핸드)에 가져갈 수 있는 최대 순이익
 };
 
 function loseBias(chips) {
@@ -45,6 +46,13 @@ function capOK(bet, payout) {
 function applyFee(net) {
   return net > 0 ? Math.floor(net * (1 - BALANCE.fee)) : net;
 }
+
+// 한 판 획득 상한. 모든 게임이 칩에 반영하기 직전에 이 함수를 통과시킵니다.
+// 수수료를 뗀 뒤 마지막에 적용하므로, 실제로 받는 칩이 이 값을 넘지 않습니다.
+function capWin(net) {
+  return net > BALANCE.maxWin ? BALANCE.maxWin : net;
+}
+
 
 // drawFn(): 결과 하나를 무작위로 만든다. netFn(result): 그 결과의 순손익(또는 유불리 점수).
 // opts.bet: 총 베팅액 (주면 netFn을 순손익으로 보고 배율 상한을 적용)

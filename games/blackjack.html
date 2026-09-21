@@ -324,6 +324,13 @@
           </ul>
         </div>
         <div class="rules-sec">
+          <h4>한 판 획득 상한</h4>
+          <ul>
+            <li><b>한 번의 판에서 가져갈 수 있는 순이익은 4,300칩까지입니다.</b> 그보다 많이 나와도 4,300칩만 지급됩니다.</li>
+            <li>모든 게임에 공통으로 적용됩니다. 상한에 걸리면 결과 문구에 표시됩니다.</li>
+          </ul>
+        </div>
+        <div class="rules-sec">
           <h4>승패와 배당</h4>
           <table class="rules-table">
             <tr><th>상황</th><th>결과</th><th>지급 (총액)</th></tr>
@@ -730,16 +737,18 @@
     }
 
     async function finish(outcome, detail) {
-      let net = 0;
+      let net = 0, rawNet = 0;
       let msg, cls;
       if (outcome === 'blackjack') {
-        net = applyFee(Math.floor(bet * BLACKJACK_PAY));   // 승리 순이익 수수료
+        rawNet = applyFee(Math.floor(bet * BLACKJACK_PAY));   // 승리 순이익 수수료
+        net = capWin(rawNet);                                 // 한 판 획득 상한
         msg = `🎉 BLACKJACK! +${net.toLocaleString()} 칩`;
         cls = 'result-win';
         glowHand('player', 'glow-gold');
         playSfx('win');
       } else if (outcome === 'win') {
-        net = applyFee(bet);   // 승리 순이익 수수료
+        rawNet = applyFee(bet);   // 승리 순이익 수수료
+        net = capWin(rawNet);     // 한 판 획득 상한
         msg = `✅ 승리! +${net.toLocaleString()} 칩`;
         cls = 'result-win';
         glowHand('player', 'glow-win');
@@ -757,7 +766,7 @@
         if (handTotal(player).total <= 21) glowHand('player', 'glow-lose');
         playSfx('lose');
       }
-      showResult(msg, detail + (doubled ? ' · 더블다운' : '') + (net > 0 ? ' · 수수료 5% 차감' : ''), cls);
+      showResult(msg, detail + (doubled ? ' · 더블다운' : '') + (net > 0 ? ' · 수수료 5% 차감' : '') + (net > 0 && net !== rawNet ? ' · 1회 상한 4,300칩 적용' : ''), cls);
       const row = document.querySelector(`.rule-row[data-key="${outcome}"]`);
       if (row) row.classList.add('hit');
 

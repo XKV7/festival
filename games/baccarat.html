@@ -429,6 +429,7 @@
             <li>한 판에 받을 수 있는 배율에 한도가 있습니다. 여기서 배율은 <b>이번 판 총 지급액 ÷ 이번 판 총 베팅액</b>입니다.</li>
             <li>크게 걸수록 한도가 낮아집니다. 한도를 넘는 결과는 <span class="warn">아예 나오지 않습니다.</span></li>
             <li>여러 곳에 나눠 걸면 총 베팅이 늘어 지급 비율이 낮아지므로, 오히려 한도에 걸리지 않을 수 있습니다.</li>
+            <li><b>한 판 획득 상한 4,300칩.</b> 한 번의 판에서 순이익이 4,300칩을 넘으면 4,300칩까지만 지급됩니다.</li>
           </ul>
           <table class="rules-table">
             <tr><th>이번 판 총 베팅</th><th>허용 배율</th></tr>
@@ -829,7 +830,8 @@
           winnings += amt;   // 타이 시 플레이어/뱅커 베팅 반환
         }
       }
-      const net = winnings - total;
+      const rawNet = winnings - total;
+      const net = capWin(rawNet);                     // 한 판 획득 상한
 
       // 표시
       if (winner === 'tie') {
@@ -847,7 +849,7 @@
 
       const title = winner === 'tie' ? `🤝 타이 (${p} : ${b})` : `${AREA_LABEL[winner]} 승 (${p} : ${b})${winner === 'banker' && b === 6 ? ' · 슈퍼식스 x1.5' : ''}`;
       if (net > 0) {
-        showResult(`🎉 ${title} · +${net.toLocaleString()} 칩`, `당첨: ${hitKeys.map(k => AREA_LABEL[k]).join(', ')} · 지급 ${winnings.toLocaleString()}`, 'result-win');
+        showResult(`🎉 ${title} · +${net.toLocaleString()} 칩`, `당첨: ${hitKeys.map(k => AREA_LABEL[k]).join(', ')} · 지급 ${winnings.toLocaleString()}` + (net > 0 && net !== rawNet ? ' · 1회 상한 4,300칩 적용' : ''), 'result-win');
         playSfx('win');
       } else if (net === 0) {
         showResult(`${title} · 본전`, winner === 'tie' ? '플레이어/뱅커 베팅 반환' : `지급 ${winnings.toLocaleString()} = 베팅 ${total.toLocaleString()}`, 'result-push');
