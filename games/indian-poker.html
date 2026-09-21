@@ -344,8 +344,9 @@
           <h4>⚔️ 1:1 실시간 대결</h4>
           <ul>
             <li>화면 위의 <b>1:1 실시간 대결</b>을 누르면 같은 게임을 고른 다른 플레이어와 연결됩니다. 상대가 없으면 기다리다가 두 번째 사람이 오는 순간 시작합니다.</li>
-            <li><b>양쪽 스택은 항상 같습니다.</b> 시작 스택은 1,000칩이며, 둘 중 칩이 더 적은 쪽에 맞춰집니다. 입장하려면 최소 100칩이 필요합니다.</li>
-            <li>테이블 스택과 별개로 <b>매 판 끝날 때마다 실제 칩에 즉시 반영</b>됩니다. 도중에 나가도 그때까지의 결과는 그대로 남습니다.</li>
+            <li>각자 <b>자기가 가진 칩 그대로</b> 앉습니다. 상대와 칩이 달라도 됩니다. 입장하려면 최소 100칩이 필요합니다.</li>
+            <li>베팅 단위는 <b>둘 중 칩이 적은 쪽</b>이 한 판을 감당할 수 있는 범위로 자동 조정됩니다.</li>
+            <li><b>매 판 끝날 때마다 실제 칩에 즉시 반영</b>됩니다. 도중에 나가도 그때까지의 결과는 그대로 남습니다.</li>
             <li>한 번의 행동에 <b>30초</b>가 주어집니다. 막대가 줄어드는 동안 고르세요.</li>
             <li><span class="warn">시간이 지나거나 상대가 나가면 자동으로 처리됩니다.</span> 낼 돈이 없으면 체크, 있으면 폴드로 넘어가고 남은 쪽이 팟을 가져갑니다.</li>
             <li>한쪽 스택이 바닥나면 대결이 끝납니다. <b>나가기</b>를 누르면 언제든 중단할 수 있습니다.</li>
@@ -553,7 +554,7 @@
       const btn = $('startBtn');
       const need = getBet() * MAX_ROUND_COST;
       if (typeof mode !== 'undefined' && mode === 'pvp') {
-        $('betNote').textContent = `1:1 대결은 양쪽 스택을 같게 맞춥니다 (최대 ${MP_BUYIN.toLocaleString()} 칩) · 베팅 단위는 위 값에서 시작`;
+        $('betNote').textContent = `1:1 대결은 각자 가진 칩 그대로 앉습니다 · 베팅 단위는 위 값에서 시작하며 적은 쪽 스택에 맞춰 조정됩니다`;
         if (currentChips < MP_MIN_CHIPS) { btn.disabled = true; btn.textContent = `칩 부족 (${MP_MIN_CHIPS} 필요)`; }
         else { btn.disabled = false; btn.textContent = '⚔️ 상대 찾기'; }
         return;
@@ -835,6 +836,11 @@
     async function finish(outcome) {
       let net = 0, msg, sub, cls;
       const detail = `내 카드 ${meCard} vs 임태현 ${aiCard}`;
+      // 상대가 낸 금액을 넘어서는 부분은 돌려준다 (레이즈에 폴드했을 때 등)
+      const over = mePut - aiPut;
+      if (over > 0) { mePut -= over; pot -= over; }
+      else if (over < 0) { aiPut += over; pot += over; }
+      renderTable();
       const rake = Math.floor(pot * RAKE);
       if (outcome === 'me-win') {
         net = pot - rake - mePut;
@@ -919,7 +925,7 @@
       $('modePvp').classList.toggle('active', m === 'pvp');
       $('pvpBar').style.display = m === 'pvp' ? '' : 'none';
       $('ipSub').textContent = m === 'pvp'
-        ? '다른 플레이어와 실시간 1:1 · 양쪽 스택 동일 · 내 카드는 못 보고 상대 카드만 보인다'
+        ? '다른 플레이어와 실시간 1:1 · 각자 보유 칩으로 참가 · 내 카드는 못 보고 상대 카드만 보인다'
         : '딜러 임태현과 1:1 · 내 카드는 못 보고 상대 카드만 보인다 · 높은 숫자가 승리';
       setOppSeatName(m === 'pvp' ? '⚔️ 상대' : '🤵 ' + SITE.dealer);
       if (m === 'pvp') pvpBar('대기', '');
@@ -946,16 +952,11 @@
 
     // 내 차례: 버튼을 띄우고 고른 행동을 반환. 제한 시간이 지나면 fallback.
     function pvpMyTurn(choices, hint, deadline, fallback) {
-      return new Promise(resolve => {
+      return new Promise((resolve, reject) => {
         let done = false;
-        const finish = act => {
-          if (done) return;
-          done = true;
-          clearInterval(poll);
-          stopTurnTimer();
-          disableActions();
-          resolve(act);
-        };
+        const stop = () => { done = true; clearInterval(poll); stopTurnTimer(); disableActions(); unregister(); };
+        const finish = act => { if (done) return; stop(); resolve(act); };
+        const unregister = mpRegisterWaiter(() => { if (done) return; stop(); reject(new Error(MP_ABORT)); });
         setActions(choices.map(c => ({
           id: c.id, label: c.label, cls: c.cls, fn: () => finish(c.act)
         })), hint);
@@ -1002,19 +1003,22 @@
         });
         if (PVP.abort) { await mpLeave(); return pvpReset(); }
         PVP.on = true;
-        PVP.myStack = m.stack;
-        PVP.oppStack = m.stack;
+        PVP.myStack = m.myStack;
+        PVP.oppStack = m.oppStack;
         PVP.no = 0;
-        PVP.unit = Math.max(MIN_BET, Math.min(u, Math.floor(m.stack / MAX_ROUND_COST / BET_STEP) * BET_STEP));
+        const room = Math.floor(Math.min(m.myStack, m.oppStack) / MAX_ROUND_COST / BET_STEP) * BET_STEP;
+        PVP.unit = Math.max(MIN_BET, Math.min(u, room));
         setOppSeatName('⚔️ ' + oppName());
         pvpBar('대결 시작', '');
-        log(`1:1 매칭 완료 · 상대 ${oppName()} · 양쪽 스택 ${m.stack}`);
-        showResult(`${oppName()} 와(과) 매칭되었습니다`, `양쪽 스택 ${m.stack.toLocaleString()} 칩 · 곧 시작합니다`, 'result-win');
+        log(`1:1 매칭 완료 · 상대 ${oppName()} · 내 ${m.myStack} / 상대 ${m.oppStack}`);
+        showResult(`${oppName()} 와(과) 매칭되었습니다`, `내 스택 ${m.myStack.toLocaleString()} · 상대 ${m.oppStack.toLocaleString()} · 곧 시작합니다`, 'result-win');
         await wait(1200);
         await pvpLoop();
       } catch (e) {
-        console.error(e);
-        showResult('연결에 실패했습니다', '잠시 후 다시 시도해주세요', 'result-lose');
+        if (!mpIsAbort(e)) {
+          console.error(e);
+          showResult('연결에 실패했습니다', '잠시 후 다시 시도해주세요', 'result-lose');
+        }
         await mpLeave();
         pvpReset();
       }
@@ -1039,6 +1043,7 @@
         try {
           await pvpHand();
         } catch (e) {
+          if (mpIsAbort(e)) break;          // 나가기를 눌러 취소된 경우
           console.error(e);
           showResult('상대와 연결이 끊겼습니다', '대결을 종료합니다', 'result-lose');
           break;
@@ -1160,6 +1165,11 @@
     async function pvpFinish(outcome, forced) {
       stopTurnTimer();
       setTurn(null);
+      // 상대가 낸 금액을 넘어서는 부분은 이길 수 없는 돈이므로 돌려준다 (수수료도 붙지 않음)
+      const over = mePut - aiPut;
+      if (over > 0) { mePut -= over; pot -= over; }
+      else if (over < 0) { aiPut += over; pot += over; }
+      renderTable();
       const rake = Math.floor(pot * RAKE);
       const iWin = outcome === 'me-win' || outcome === 'ai-fold';
       const iLose = outcome === 'ai-win' || outcome === 'me-fold';
@@ -1217,11 +1227,12 @@
     }
 
     async function pvpLeave() {
+      if (!PVP.on && !PVP.busy) return;
       PVP.abort = true;
       PVP.on = false;
       stopTurnTimer();
       showResult('대결에서 나갔습니다', '', '');
-      await mpLeave();
+      await mpLeave();          // 대기 중인 약속을 모두 깨워 루프를 끝낸다
       pvpReset();
     }
 
