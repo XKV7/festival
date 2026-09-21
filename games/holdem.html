@@ -216,7 +216,18 @@
 
     <div class="game-area">
       <div class="hd-title">♠ TEXAS HOLD'EM</div>
-      <div class="hd-sub">딜러 임태현과 헤즈업 노리밋 · 블라인드 10 / 20 · 내 칩이 곧 내 스택</div>
+      <div class="hd-sub" id="hdSub">딜러 임태현과 헤즈업 노리밋 · 블라인드 10 / 20 · 내 칩이 곧 내 스택</div>
+
+      <div class="mode-bar">
+        <button class="mode-btn active" id="modeAi" onclick="setMode('ai')">🤵 임태현과 대결</button>
+        <button class="mode-btn" id="modePvp" onclick="setMode('pvp')">⚔️ 1:1 실시간 대결</button>
+      </div>
+      <div class="pvp-bar" id="pvpBar" style="display:none">
+        <span class="pv-state" id="pvpState">대기</span>
+        <span class="pv-opp" id="pvpOpp"></span>
+        <span class="pv-stacks" id="pvpStacks"></span>
+        <button class="btn btn-outline btn-small" id="pvpLeaveBtn" onclick="pvpLeave()">나가기</button>
+      </div>
 
       <div class="hd-score">
         <div class="score-box"><div class="label">핸드</div><div class="value" id="scoreHands">0</div></div>
@@ -265,7 +276,7 @@
       <div class="action-bar">
         <div id="idlePhase">
           <div class="hd-actions">
-            <button class="btn btn-gold btn-act" id="startBtn" onclick="startHand()">START</button>
+            <button class="btn btn-gold btn-act" id="startBtn" onclick="pressStart()">START</button>
           </div>
           <div class="action-hint" id="idleHint">스페이스바로도 시작할 수 있어요</div>
         </div>
@@ -285,6 +296,7 @@
             <span class="label" id="raiseHint"></span>
           </div>
           <div class="action-hint">F = 폴드 · C = 체크/콜 · R = 레이즈 · A = 올인</div>
+          <div class="turn-timer" id="turnTimer" style="display:none"><i></i></div>
         </div>
       </div>
 
@@ -306,8 +318,8 @@
         <div class="rules-sec">
           <h4>게임의 핵심</h4>
           <ul>
-            <li>딜러 <b>임태현</b>과 1:1(헤즈업) 노리밋 텍사스 홀덤입니다.</li>
-            <li><b>내 칩이 곧 내 스택</b>입니다. 따로 바이인하지 않습니다.</li>
+            <li>딜러 <b>임태현</b>(AI) 또는 <b>다른 플레이어</b>와 1:1(헤즈업) 노리밋 텍사스 홀덤입니다. 화면 위에서 상대를 고릅니다.</li>
+            <li>AI 대결에서는 <b>내 칩이 곧 내 스택</b>입니다. 1:1 대결에서는 양쪽이 같은 스택으로 시작합니다.</li>
             <li>블라인드는 <b>스몰 10 / 빅 20</b>이며, 딜러 버튼은 매 핸드 교대합니다.</li>
             <li>내 카드 2장과 공용 카드 5장 중 <b>가장 좋은 5장 조합</b>으로 승부합니다.</li>
           </ul>
@@ -353,6 +365,17 @@
           </ul>
         </div>
         <div class="rules-sec">
+          <h4>⚔️ 1:1 실시간 대결</h4>
+          <ul>
+            <li>화면 위의 <b>1:1 실시간 대결</b>을 누르면 같은 게임을 고른 다른 플레이어와 연결됩니다. 상대가 없으면 기다리다가 두 번째 사람이 오는 순간 시작합니다.</li>
+            <li><b>양쪽 스택은 항상 같습니다.</b> 시작 스택은 1,000칩이며, 둘 중 칩이 더 적은 쪽에 맞춰집니다. 입장하려면 최소 100칩이 필요합니다.</li>
+            <li>테이블 스택과 별개로 <b>매 판 끝날 때마다 실제 칩에 즉시 반영</b>됩니다. 도중에 나가도 그때까지의 결과는 그대로 남습니다.</li>
+            <li>한 번의 행동에 <b>30초</b>가 주어집니다. 막대가 줄어드는 동안 고르세요.</li>
+            <li><span class="warn">시간이 지나거나 상대가 나가면 자동으로 처리됩니다.</span> 낼 돈이 없으면 체크, 있으면 폴드로 넘어가고 남은 쪽이 팟을 가져갑니다.</li>
+            <li>한쪽 스택이 바닥나면 대결이 끝납니다. <b>나가기</b>를 누르면 언제든 중단할 수 있습니다.</li>
+          </ul>
+        </div>
+        <div class="rules-sec">
           <h4>전략 힌트</h4>
           <ul>
             <li>헤즈업은 6~9인 테이블보다 <b>훨씬 넓은 범위의 카드로 플레이</b>합니다. A-7이나 K-9도 충분히 좋은 패입니다.</li>
@@ -383,6 +406,7 @@
   <script src="../js/firebase-config.js"></script>
   <script src="../js/site-config.js"></script>
   <script src="../js/balance.js"></script>
+  <script src="../js/multiplayer.js"></script>
   <script>
     // 로그인 체크
     if (!getCurrentPlayer()) window.location.href = '../index.html';
@@ -521,6 +545,14 @@
     const tendency = { betsFaced: 0, folds: 0, showdownsSeen: 0 };
     let pendingResolve = null;
 
+    // ---- 1:1 실시간 대결 상태 ----
+    let mode = 'ai';
+    const TURN_MS = 30000;        // 한 번의 행동 제한 시간
+    const NEXT_HAND_MS = 3500;    // 다음 핸드까지 대기
+    const PVP = { on: false, myStack: 0, oppStack: 0, no: 0, seq: 0, abort: false, busy: false };
+    let pvpCards = null;          // { me: [c,c], ai: [c,c] }
+    let pvpBoard = [];            // 남은 보드 카드
+
     const $ = id => document.getElementById(id);
     const wait = ms => new Promise(r => setTimeout(r, ms));
     const chance = p => Math.random() < p;
@@ -545,9 +577,12 @@
     }
     function cardText(c) { return rankLabel(c.r) + SUITS[c.s].s; }
 
+    // 상대 표시 이름 (AI 모드는 딜러, 1:1 은 상대 계정)
+    function foeName() { return PVP.on ? (MP.oppPid || '상대') : SITE.dealer; }
+
     function renderStacks() {
-      $('aiStack').textContent = aiStack.toLocaleString();
-      $('meStack').textContent = (H ? H.stack.me : currentChips).toLocaleString();
+      $('aiStack').textContent = (PVP.on ? (H ? H.stack.ai : PVP.oppStack) : aiStack).toLocaleString();
+      $('meStack').textContent = (H ? H.stack.me : (PVP.on ? PVP.myStack : currentChips)).toLocaleString();
       $('pot').textContent = (H ? H.pot : 0).toLocaleString();
       const bet = (who) => {
         const el = $(who === 'me' ? 'meBet' : 'aiBet');
@@ -616,8 +651,18 @@
     }
     function updateStartButton() {
       const btn = $('startBtn');
+      if (typeof mode !== 'undefined' && mode === 'pvp') {
+        if (PVP.on || PVP.busy) { btn.disabled = true; btn.textContent = '대결 진행 중'; return; }
+        if (currentChips < MP_MIN_CHIPS) { btn.disabled = true; btn.textContent = `칩 부족 (${MP_MIN_CHIPS} 필요)`; }
+        else { btn.disabled = false; btn.textContent = '⚔️ 상대 찾기'; }
+        return;
+      }
       if (currentChips < BB) { btn.disabled = true; btn.textContent = `칩 부족 (최소 ${BB})`; }
       else { btn.disabled = false; btn.textContent = handNo === 0 ? 'START' : '다음 핸드'; }
+    }
+    function pressStart() {
+      if (mode === 'pvp') { if (!PVP.on && !PVP.busy) pvpStart(); return; }
+      return startHand();
     }
 
     // ============ 핸드 엔진 ============
@@ -649,14 +694,14 @@
     function applyAction(who, act) {
       // act: {type: 'fold'|'check'|'call'|'raise', to?: number}
       const o = other(who);
-      if (act.type === 'fold') { H.folded = who; setAction(who, 'FOLD', 'fold'); log(`${who === 'me' ? '나' : '임태현'} 폴드`); return 'fold'; }
-      if (act.type === 'check') { setAction(who, 'CHECK', 'check'); log(`${who === 'me' ? '나' : '임태현'} 체크`); return 'passive'; }
+      if (act.type === 'fold') { H.folded = who; setAction(who, 'FOLD', 'fold'); log(`${who === 'me' ? '나' : foeName()} 폴드`); return 'fold'; }
+      if (act.type === 'check') { setAction(who, 'CHECK', 'check'); log(`${who === 'me' ? '나' : foeName()} 체크`); return 'passive'; }
       if (act.type === 'call') {
         const need = toCall(who);
         const paid = commit(who, need);
         refundExcess();
         setAction(who, H.allin[who] ? `CALL ${paid} (올인)` : `CALL ${paid}`, H.allin[who] ? 'allin' : 'call');
-        log(`${who === 'me' ? '나' : '임태현'} 콜 ${paid}${H.allin[who] ? ' (올인)' : ''}`);
+        log(`${who === 'me' ? '나' : foeName()} 콜 ${paid}${H.allin[who] ? ' (올인)' : ''}`);
         playSfx('chip');
         return 'passive';
       }
@@ -671,7 +716,7 @@
       if (raiseSize >= Math.max(BB, H.lastRaiseSize)) H.lastRaiseSize = raiseSize;
       const label = prevOpp === 0 ? 'BET' : 'RAISE';
       setAction(who, `${label} ${H.streetBet[who]}${H.allin[who] ? ' (올인)' : ''}`, H.allin[who] ? 'allin' : 'raise');
-      log(`${who === 'me' ? '나' : '임태현'} ${prevOpp === 0 ? '베팅' : '레이즈'} → ${H.streetBet[who]}${H.allin[who] ? ' (올인)' : ''}`);
+      log(`${who === 'me' ? '나' : foeName()} ${prevOpp === 0 ? '베팅' : '레이즈'} → ${H.streetBet[who]}${H.allin[who] ? ' (올인)' : ''}`);
       playSfx('chip');
       if (H.streetBet[who] <= prevOpp) return 'passive';   // 올인인데 콜에도 못 미침
       return 'aggressive';
@@ -687,7 +732,8 @@
         if (!need[who]) continue;
         setTurn(who);
         renderStacks();
-        const act = who === 'me' ? await playerDecision() : await aiDecision();
+        const act = PVP.on ? await pvpDecision(who)
+                  : who === 'me' ? await playerDecision() : await aiDecision();
         const r = applyAction(who, act);
         renderStacks();
         if (r === 'fold') return 'fold';
@@ -715,7 +761,7 @@
         const minTo = Math.min(minRaiseTo('me'), maxRaiseTo('me'));
         $('raiseAmount').min = minTo; $('raiseAmount').max = maxRaiseTo('me');
         presetRaise(H.streetBet.ai === 0 ? 'half' : 'min');
-        showResult(tc === 0 ? '당신의 차례' : `임태현 베팅 ${H.streetBet.ai.toLocaleString()} · 콜 ${tc.toLocaleString()}`,
+        showResult(tc === 0 ? '당신의 차례' : `${foeName()} 베팅 ${H.streetBet.ai.toLocaleString()} · 콜 ${tc.toLocaleString()}`,
           `팟 ${H.pot.toLocaleString()} · 내 스택 ${H.stack.me.toLocaleString()}`, '');
         setPhase('act');
         if (!canRaise) $('raiseBtn').disabled = true;
@@ -876,12 +922,20 @@
     }
 
     // ============ 핸드 진행 ============
-    async function startHand() {
-      if (phase !== 'idle') return;
-      if (currentChips < BB) { updateStartButton(); return; }
-      if (aiStack < AI_REBUY_BELOW) { aiStack = AI_START_STACK; log('임태현 리바이 → 5,000'); }
-      handNo++;
-      button = other(button);
+    async function startHand(pvpHand) {
+      if (!pvpHand) {
+        if (phase !== 'idle') return;
+        if (currentChips < BB) { updateStartButton(); return; }
+        if (aiStack < AI_REBUY_BELOW) { aiStack = AI_START_STACK; log('임태현 리바이 → 5,000'); }
+        handNo++;
+        button = other(button);
+      } else {
+        handNo = PVP.no;
+        PVP.seq = 0;
+        button = pvpHand.button === MP.mySeat ? 'me' : 'ai';
+        pvpCards = { me: pvpHand.cards[MP.mySeat], ai: pvpHand.cards[MP.oppSeat] };
+        pvpBoard = pvpHand.board.slice();
+      }
       const showdownNet = d => {
         const n = d.length;
         const me = [d[n - 1], d[n - 3]], ai = [d[n - 2], d[n - 4]], board = [d[n - 5], d[n - 6], d[n - 7], d[n - 8], d[n - 9]];
@@ -889,9 +943,10 @@
         return a > b ? 1 : a < b ? -1 : 0;
       };
       H = {
-        deck: steerOutcome(currentChips, freshDeck, showdownNet), board: [], me: [], ai: [],
+        deck: pvpHand ? [] : steerOutcome(currentChips, freshDeck, showdownNet), board: [], me: [], ai: [],
         pot: 0, committed: { me: 0, ai: 0 }, streetBet: { me: 0, ai: 0 },
-        stack: { me: currentChips, ai: aiStack }, allin: { me: false, ai: false },
+        stack: pvpHand ? { me: PVP.myStack, ai: PVP.oppStack } : { me: currentChips, ai: aiStack },
+        allin: { me: false, ai: false },
         street: 'preflop', lastRaiseSize: BB, folded: null,
         meActions: { preflop: null, postAggr: false }, aiBetPending: false
       };
@@ -909,13 +964,13 @@
       H.lastRaiseSize = BB;
       renderStacks();
       playSfx('bet');
-      log(`핸드 시작 · 버튼 ${button === 'me' ? '나' : '임태현'} · 블라인드 ${SB}/${BB}`);
-      showResult('블라인드 투입', `${sbWho === 'me' ? '나' : '임태현'} SB ${SB} · ${bbWho === 'me' ? '나' : '임태현'} BB ${BB}`, '');
+      log(`핸드 시작 · 버튼 ${button === 'me' ? '나' : foeName()} · 블라인드 ${SB}/${BB}`);
+      showResult('블라인드 투입', `${sbWho === 'me' ? '나' : foeName()} SB ${SB} · ${bbWho === 'me' ? '나' : foeName()} BB ${BB}`, '');
 
       // 홀카드 2장씩
       for (let k = 0; k < 2; k++) {
-        H.me.push(H.deck.pop()); $('meCards').appendChild(cardElement(H.me[k], true)); playSfx('card'); await wait(220);
-        H.ai.push(H.deck.pop()); $('aiCards').appendChild(cardElement(H.ai[k], false)); playSfx('card'); await wait(220);
+        H.me.push(PVP.on ? pvpCards.me[k] : H.deck.pop()); $('meCards').appendChild(cardElement(H.me[k], true)); playSfx('card'); await wait(220);
+        H.ai.push(PVP.on ? pvpCards.ai[k] : H.deck.pop()); $('aiCards').appendChild(cardElement(H.ai[k], false)); playSfx('card'); await wait(220);
       }
       renderMyHandName();
       await wait(250);
@@ -947,7 +1002,7 @@
     async function dealBoard(n) {
       const board = $('board');
       for (let k = 0; k < n; k++) {
-        const c = H.deck.pop();
+        const c = PVP.on ? pvpBoard.shift() : H.deck.pop();
         H.board.push(c);
         const slot = board.children[H.board.length - 1];
         const el = cardElement(c, false);
@@ -969,7 +1024,7 @@
       let winner, meScore = null, aiScore = null, detail = '';
       if (H.folded) {
         winner = other(H.folded);
-        detail = H.folded === 'me' ? '내가 폴드' : '임태현이 폴드';
+        detail = H.folded === 'me' ? '내가 폴드' : `${foeName()}이(가) 폴드`;
       } else {
         // 쇼다운: AI 카드 공개
         $('aiCards').querySelectorAll('.card').forEach(c => c.classList.add('flipped'));
@@ -979,7 +1034,7 @@
         const meAll = H.me.concat(H.board), aiAll = H.ai.concat(H.board);
         meScore = evaluateBest(meAll); aiScore = evaluateBest(aiAll);
         const meName = HAND_NAMES[categoryOf(meScore)], aiName = HAND_NAMES[categoryOf(aiScore)];
-        $('aiHand').innerHTML = `임태현 핸드: <b>${aiName}</b>`;
+        $('aiHand').innerHTML = `${foeName()} 핸드: <b>${aiName}</b>`;
         $('meHand').innerHTML = `내 핸드: <b>${meName}</b>`;
         winner = meScore > aiScore ? 'me' : aiScore > meScore ? 'ai' : 'tie';
         detail = `${meName} vs ${aiName}`;
@@ -1005,15 +1060,31 @@
         msg = '🤝 무승부 · 팟 분배'; cls = 'result-push';
         playSfx('chip');
       }
-      // AI 스택: 남은 스택 + 가져간 팟 (수수료는 플레이어 승리 시에만 하우스 몫)
-      aiStack = H.stack.ai + (winner === 'ai' ? pot : winner === 'tie' ? pot - Math.floor(pot / 2) : 0);
+      if (!PVP.on) {
+        // AI 스택: 남은 스택 + 가져간 팟 (수수료는 플레이어 승리 시에만 하우스 몫)
+        aiStack = H.stack.ai + (winner === 'ai' ? pot : winner === 'tie' ? pot - Math.floor(pot / 2) : 0);
+      }
       score.hands++; score.net += net;
       renderScore();
       showResult(msg, detail, cls);
       log(`${winner === 'me' ? '승' : winner === 'ai' ? '패' : '무'} · ${detail} · 손익 ${net > 0 ? '+' : ''}${net}`);
 
-      // 칩 정산: 순손익만 한 번에 반영
-      if (net !== 0) {
+      if (PVP.on) {
+        // 상대 순손익도 같이 계산해 한쪽이 양쪽 계정에 한 번만 반영
+        const oppNet = winner === 'ai' ? pot - rake - H.committed.ai
+                     : winner === 'me' ? -H.committed.ai
+                     : (pot - Math.floor(pot / 2)) - H.committed.ai;
+        PVP.myStack = H.stack.me + (winner === 'me' ? pot - rake : winner === 'tie' ? Math.floor(pot / 2) : 0);
+        PVP.oppStack = H.stack.ai + (winner === 'ai' ? pot - rake : winner === 'tie' ? pot - Math.floor(pot / 2) : 0);
+        try {
+          await mpSettle(PVP.no, { [MP.myPid]: net, [MP.oppPid]: oppNet });
+        } catch (e) {
+          console.error('정산 실패', e);
+          showResult('⚠️ 칩 반영 오류', '네트워크를 확인해주세요', 'result-lose');
+        }
+        pvpBar('진행 중', '');
+      } else if (net !== 0) {
+        // 칩 정산: 순손익만 한 번에 반영
         try {
           await updateChips(net);
         } catch (e) {
@@ -1025,7 +1096,9 @@
       await wait(400);
       renderStacks();
       setPhase('idle');
-      $('idleHint').textContent = `다음 핸드는 ${other(button) === 'me' ? '내가' : '임태현이'} 버튼 · 스페이스바로 시작`;
+      $('idleHint').textContent = PVP.on
+        ? '잠시 후 다음 핸드가 시작됩니다'
+        : `다음 핸드는 ${other(button) === 'me' ? '내가' : SITE.dealer + '이(가)'} 버튼 · 스페이스바로 시작`;
     }
 
     function highlightBest(all, who) {
@@ -1040,6 +1113,192 @@
       });
     }
 
+    // ============ 1:1 실시간 대결 ============
+    // 호스트가 핸드마다 홀카드 4장 + 보드 5장과 버튼을 올리고,
+    // 두 클라이언트가 같은 엔진을 같은 행동 순서로 돌립니다(록스텝).
+    function oppName() { return MP.oppPid || '상대'; }
+    function setOppSeatName(text) {
+      const el = $('seatAi') && $('seatAi').querySelector('.seat-name');
+      if (!el) return;
+      // 자식 요소(딜러 버튼 배지 등)를 지우지 않도록 맨 앞 텍스트만 교체한다
+      const first = el.firstChild;
+      if (first && first.nodeType === 3) first.nodeValue = text + ' ';
+      else el.insertBefore(document.createTextNode(text + ' '), el.firstChild);
+    }
+    function pvpBar(state, cls) {
+      $('pvpState').textContent = state;
+      $('pvpBar').className = 'pvp-bar' + (cls ? ' ' + cls : '');
+      $('pvpOpp').textContent = MP.oppPid ? `vs ${MP.oppPid}` : '';
+      $('pvpStacks').innerHTML = PVP.on
+        ? `내 스택 <b>${PVP.myStack.toLocaleString()}</b> · 상대 <b>${PVP.oppStack.toLocaleString()}</b>`
+        : '';
+    }
+    function setMode(m) {
+      if (PVP.on || PVP.busy || phase !== 'idle') return;
+      mode = m;
+      $('modeAi').classList.toggle('active', m === 'ai');
+      $('modePvp').classList.toggle('active', m === 'pvp');
+      $('pvpBar').style.display = m === 'pvp' ? '' : 'none';
+      $('hdSub').textContent = m === 'pvp'
+        ? `다른 플레이어와 실시간 헤즈업 · 블라인드 ${SB} / ${BB} · 양쪽 스택 동일`
+        : `딜러 ${SITE.dealer}과 헤즈업 노리밋 · 블라인드 ${SB} / ${BB} · 내 칩이 곧 내 스택`;
+      setOppSeatName(m === 'pvp' ? '⚔️ 상대' : '🤵 ' + SITE.dealer);
+      if (m === 'pvp') pvpBar('대기', '');
+      updateStartButton();
+    }
+
+    // ---- 턴 타이머 ----
+    let timerHandle = null;
+    function startTurnTimer(deadline) {
+      const bar = $('turnTimer'), fill = bar.querySelector('i');
+      bar.style.display = '';
+      const tick = () => {
+        const remain = Math.max(0, deadline - mpNow());
+        fill.style.width = (remain / TURN_MS * 100) + '%';
+        bar.classList.toggle('low', remain < 8000);
+      };
+      tick();
+      timerHandle = setInterval(tick, 250);
+    }
+    function stopTurnTimer() {
+      if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+      $('turnTimer').style.display = 'none';
+    }
+
+    // 한 번의 행동을 확정합니다. 내 차례면 기존 버튼 UI, 상대 차례면 DB 대기.
+    // 제한 시간이 지나면 체크(무료)나 폴드로 자동 처리됩니다.
+    async function pvpDecision(who) {
+      const seq = PVP.seq++;
+      const deadline = mpNow() + TURN_MS;
+      const fallbackFor = w => ({ type: toCall(w) === 0 ? 'check' : 'fold' });
+
+      if (who === 'me') {
+        startTurnTimer(deadline);
+        const auto = setInterval(() => {
+          if (mpNow() >= deadline && pendingResolve) {
+            const r = pendingResolve; pendingResolve = null;
+            setPhase('busy');
+            r({ ...fallbackFor('me'), forced: true });
+          }
+        }, 300);
+        const act = await playerDecision();
+        clearInterval(auto);
+        stopTurnTimer();
+        setPhase('busy');
+        // 내가 늦어 상대가 대신 폴드를 밀어 넣었다면 그쪽이 확정됩니다.
+        return await mpPushAction(PVP.no, seq, act);
+      }
+
+      setPhase('busy');
+      showResult(`${oppName()} 의 차례`, `팟 ${H.pot.toLocaleString()} · 내 스택 ${H.stack.me.toLocaleString()}`, '');
+      startTurnTimer(deadline);
+      const landed = await mpAwaitAction(PVP.no, seq, {
+        deadline,
+        fallback: fallbackFor('ai'),     // 단순히 늦은 경우: 낼 돈 없으면 체크
+        goneFallback: { type: 'fold' }   // 자리를 비운 경우: 폴드로 몰수
+      });
+      stopTurnTimer();
+      return landed;
+    }
+
+    // ---- 매칭 ----
+    async function pvpStart() {
+      if (PVP.busy || PVP.on) return;
+      if (currentChips < MP_MIN_CHIPS) {
+        showResult('칩이 부족합니다', `1:1 대결은 ${MP_MIN_CHIPS} 칩 이상 필요합니다`, 'result-lose');
+        return;
+      }
+      PVP.busy = true; PVP.abort = false;
+      $('modeAi').disabled = true; $('modePvp').disabled = true;
+      setPhase('busy');
+      pvpBar('상대를 찾는 중', '');
+      showResult('상대를 찾는 중입니다', '다른 PC에서도 1:1 대결을 누르면 연결됩니다', '');
+      try {
+        const m = await mpFindMatch('holdem', currentChips, st => {
+          pvpBar(st === 'waiting' ? '상대 기다리는 중' : '상대를 찾는 중', '');
+        });
+        if (PVP.abort) { await mpLeave(); return pvpReset(); }
+        PVP.on = true;
+        PVP.myStack = m.stack; PVP.oppStack = m.stack;
+        PVP.no = 0;
+        setOppSeatName('⚔️ ' + oppName());
+        pvpBar('대결 시작', '');
+        log(`1:1 매칭 완료 · 상대 ${oppName()} · 양쪽 스택 ${m.stack}`);
+        showResult(`${oppName()} 와(과) 매칭되었습니다`, `양쪽 스택 ${m.stack.toLocaleString()} 칩 · 곧 시작합니다`, 'result-win');
+        await wait(1200);
+        await pvpLoop();
+      } catch (e) {
+        console.error(e);
+        showResult('연결에 실패했습니다', '잠시 후 다시 시도해주세요', 'result-lose');
+        await mpLeave();
+        pvpReset();
+      }
+    }
+
+    async function pvpLoop() {
+      while (PVP.on && !PVP.abort) {
+        if (await mpOpponentGone()) {
+          showResult('상대가 대결을 떠났습니다', '대결을 종료합니다', 'result-push');
+          break;
+        }
+        if (PVP.myStack < BB || PVP.oppStack < BB) {
+          const iBroke = PVP.myStack < BB;
+          showResult(iBroke ? '스택이 바닥났습니다' : '상대 스택이 바닥났습니다', '대결을 종료합니다', iBroke ? 'result-lose' : 'result-win');
+          break;
+        }
+        PVP.no++;
+        let hand;
+        try {
+          if (MP.isHost) {
+            const d = freshDeck();
+            hand = {
+              button: PVP.no % 2 === 1 ? 'A' : 'B',
+              cards: { A: [d.pop(), d.pop()], B: [d.pop(), d.pop()] },
+              board: [d.pop(), d.pop(), d.pop(), d.pop(), d.pop()]
+            };
+            await mpPublishHand(PVP.no, hand);
+          } else {
+            pvpBar('카드 배분 중', '');
+            hand = await mpAwaitHand(PVP.no);
+          }
+          pvpBar('진행 중', '');
+          await startHand(hand);
+        } catch (e) {
+          console.error(e);
+          showResult('상대와 연결이 끊겼습니다', '대결을 종료합니다', 'result-lose');
+          break;
+        }
+        if (!PVP.on || PVP.abort) break;
+        pvpBar('다음 핸드 준비', '');
+        await wait(NEXT_HAND_MS);
+      }
+      await mpLeave();
+      pvpReset();
+    }
+
+    async function pvpLeave() {
+      PVP.abort = true; PVP.on = false;
+      stopTurnTimer();
+      if (pendingResolve) { const r = pendingResolve; pendingResolve = null; r({ type: 'fold' }); }
+      showResult('대결에서 나갔습니다', '', '');
+      await mpLeave();
+      pvpReset();
+    }
+
+    function pvpReset() {
+      PVP.on = false; PVP.busy = false; PVP.abort = false;
+      PVP.myStack = 0; PVP.oppStack = 0; PVP.no = 0; PVP.seq = 0;
+      MP.oppPid = null;
+      pvpCards = null; pvpBoard = [];
+      H = null;
+      stopTurnTimer();
+      $('modeAi').disabled = false; $('modePvp').disabled = false;
+      setOppSeatName(mode === 'pvp' ? '⚔️ 상대' : '🤵 ' + SITE.dealer);
+      renderStacks();
+      setPhase('idle');
+      if (mode === 'pvp') pvpBar('대기', '');
+    }
+
     // ============ 초기화 ============
     renderRankList();
     renderStacks();
@@ -1048,7 +1307,7 @@
 
     document.addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT') return;
-      if (phase === 'idle' && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); startHand(); return; }
+      if (phase === 'idle' && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); pressStart(); return; }
       if (phase !== 'act') return;
       const k = e.key.toLowerCase();
       if (k === 'f') playerAct('fold');
@@ -1066,7 +1325,7 @@
       currentChips = chips || 0;
       $('chipCount').textContent = currentChips.toLocaleString();
       if (currentChips <= 0) $('bustedOverlay').classList.add('active');
-      if (!H) $('meStack').textContent = currentChips.toLocaleString();
+      if (!H && !PVP.on) $('meStack').textContent = currentChips.toLocaleString();
       updateStartButton();
     });
   </script>

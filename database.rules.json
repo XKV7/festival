@@ -15,6 +15,10 @@
     "chipLog": {
       ".read": true,
       ".write": true
+    },
+    "tables": {
+      ".read": true,
+      ".write": true
     }
   }
 }

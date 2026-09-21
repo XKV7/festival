@@ -371,14 +371,14 @@ body.v2::before {
 }
 
 /* ---------- 게임 규칙 패널 (각 게임 화면 하단) ---------- */
-.rules {
+details.rules {
   margin-top: 26px;
   border: 1px solid rgba(212,168,67,0.28);
   border-radius: 14px;
   background: linear-gradient(180deg, rgba(212,168,67,0.07), rgba(10,14,23,0.45));
   overflow: hidden;
 }
-.rules > summary {
+details.rules > summary {
   list-style: none;
   cursor: pointer;
   padding: 14px 18px;
@@ -392,15 +392,15 @@ body.v2::before {
   user-select: none;
   transition: background 0.15s;
 }
-.rules > summary::-webkit-details-marker { display: none; }
-.rules > summary::after {
+details.rules > summary::-webkit-details-marker { display: none; }
+details.rules > summary::after {
   content: '▾';
   margin-left: auto;
   color: var(--gold);
   transition: transform 0.2s;
 }
-.rules[open] > summary::after { transform: rotate(180deg); }
-.rules > summary:hover { background: rgba(212,168,67,0.08); }
+details.rules[open] > summary::after { transform: rotate(180deg); }
+details.rules > summary:hover { background: rgba(212,168,67,0.08); }
 
 .rules-body { padding: 2px 18px 20px; }
 .rules-sec { margin-top: 18px; }
@@ -481,8 +481,69 @@ body.v2::before {
 .rules-note b { color: var(--neon-red); }
 
 @media (max-width: 600px) {
-  .rules > summary { padding: 12px 14px; font-size: 14px; }
+  details.rules > summary { padding: 12px 14px; font-size: 14px; }
   .rules-body { padding: 2px 14px 16px; }
   .rules-body li { font-size: 12.5px; padding-left: 23px; }
   .rules-table th, .rules-table td { padding: 6px 7px; font-size: 12px; }
+}
+
+/* ---------- 1:1 실시간 대결 (모드 전환 · 상태 바 · 턴 타이머) ---------- */
+.mode-bar {
+  display: flex; gap: 8px; justify-content: center;
+  margin: 0 auto 16px; max-width: 460px;
+  background: rgba(10,14,23,0.6);
+  border: 1px solid rgba(212,168,67,0.22);
+  border-radius: 12px; padding: 5px;
+}
+.mode-btn {
+  flex: 1; padding: 9px 10px;
+  border: none; border-radius: 9px;
+  background: transparent; color: var(--text-dim);
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.mode-btn:hover:not(.active) { color: var(--text); background: rgba(212,168,67,0.08); }
+.mode-btn.active {
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+  color: #1a1206; box-shadow: 0 2px 10px rgba(212,168,67,0.3);
+}
+.mode-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.pvp-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  justify-content: center;
+  margin: 0 auto 16px; max-width: 620px;
+  padding: 10px 14px; border-radius: 12px;
+  background: rgba(53,232,255,0.07);
+  border: 1px solid rgba(53,232,255,0.3);
+  font-size: 13px;
+}
+.pvp-bar .pv-state { font-weight: 900; color: var(--neon-cyan); }
+.pvp-bar .pv-opp { color: var(--gold-light); font-weight: 700; }
+.pvp-bar .pv-stacks { color: var(--text-dim); }
+.pvp-bar .pv-stacks b { color: var(--text); }
+.pvp-bar.warn { background: rgba(255,59,92,0.09); border-color: rgba(255,59,92,0.35); }
+.pvp-bar.warn .pv-state { color: var(--neon-red); }
+
+.pv-dots::after {
+  content: ''; animation: pvdots 1.2s steps(4, end) infinite;
+}
+@keyframes pvdots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+.turn-timer {
+  height: 5px; border-radius: 3px; overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  margin: 8px auto 0; max-width: 420px;
+}
+.turn-timer > i {
+  display: block; height: 100%; width: 100%;
+  background: linear-gradient(90deg, var(--green), var(--gold));
+  transition: width 0.25s linear;
+}
+.turn-timer.low > i { background: linear-gradient(90deg, var(--neon-red), #ff9f43); }
+
+@media (max-width: 600px) {
+  .mode-btn { font-size: 12px; padding: 8px 6px; }
+  .pvp-bar { font-size: 12px; gap: 7px; padding: 9px 11px; }
 }

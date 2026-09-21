@@ -56,8 +56,8 @@ const SITE = {
     'blackjack':    { badge: '',     badgeType: '',     min: 20,  tag: '카드' },
     'baccarat':     { badge: '독점', badgeType: 'excl', min: 20,  tag: '테이블' },
     'sicbo':        { badge: '신규', badgeType: 'new',  min: 10,  tag: '테이블' },
-    'indian-poker': { badge: '임태현', badgeType: 'ai',   min: 50,  tag: '임태현 딜러' },
-    'holdem':       { badge: '임태현', badgeType: 'ai',   min: 20,  tag: '임태현 딜러' }
+    'indian-poker': { badge: '1:1', badgeType: 'ai',   min: 50,  tag: '임태현 딜러' },
+    'holdem':       { badge: '1:1', badgeType: 'ai',   min: 20,  tag: '임태현 딜러' }
   }
 };
 
