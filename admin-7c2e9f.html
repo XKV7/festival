@@ -82,9 +82,29 @@
 
     <!-- 관리 버튼 -->
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
-      <button class="btn btn-gold" onclick="handleGenerateAccounts()">📦 계정 60개 생성</button>
       <button class="btn btn-red" onclick="handleResetAll()">🔄 전체 초기화 (칩 리셋)</button>
       <button class="btn btn-outline" onclick="exportSettlement()">📋 정산표 내보내기</button>
+    </div>
+
+    <!-- 계정 생성 / 삭제 -->
+    <div class="give-panel">
+      <div class="give-title">📦 계정 생성 / 삭제</div>
+      <div class="give-row">
+        <span class="give-label">생성</span>
+        <input type="number" id="genCount" value="60" min="1" max="300" step="1" placeholder="개수">
+        <span class="give-label">시작 번호</span>
+        <input type="number" id="genStart" value="1" min="1" max="999" step="1" placeholder="시작">
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-dim); white-space:nowrap;">
+          <input type="checkbox" id="genOverwrite" style="width:auto; margin:0;"> 기존 계정 덮어쓰기
+        </label>
+        <button class="btn btn-gold btn-small" onclick="createAccounts()">계정 생성</button>
+      </div>
+      <div class="give-row" style="margin-top:8px;">
+        <span class="give-label">삭제</span>
+        <button class="btn btn-red btn-small" onclick="deleteAllAccounts()">전체 계정 삭제</button>
+        <span class="give-hint">계정별 삭제는 표 맨 오른쪽 · PIN 은 4자리 무작위로 새로 만들어집니다</span>
+      </div>
+      <div class="give-log" id="genLog"></div>
     </div>
 
     <!-- 칩 일괄 지급 -->
@@ -251,8 +271,9 @@
           </td>
           <td>
             <button class="btn btn-outline btn-small" onclick="resetAccount('${id}')">초기화</button>
-            ${data.status === 'playing' || data.status === 'busted' ? 
+            ${data.status === 'playing' || data.status === 'busted' ?
               `<button class="btn btn-small" style="background:var(--accent); color:#fff; margin-left:4px;" onclick="settleAccount('${id}', ${data.chips})">정산</button>` : ''}
+            <button class="btn btn-red btn-small" style="margin-left:4px;" onclick="deleteAccount('${id}')">삭제</button>
           </td>
         </tr>`;
       }).join('');
@@ -266,10 +287,90 @@
     }
 
     // 계정 생성
-    async function handleGenerateAccounts() {
-      if (!confirm('계정 60개를 생성합니다. 기존 계정은 유지됩니다.')) return;
-      await generateAccounts(60);
-      alert('✅ 계정 60개 생성 완료!');
+    // ============ 계정 생성 / 삭제 ============
+    const genHistory = [];
+    function logGen(text) {
+      genHistory.unshift(`${new Date().toLocaleTimeString('ko-KR', { hour12: false })} · ${text}`);
+      if (genHistory.length > 8) genHistory.pop();
+      document.getElementById('genLog').innerHTML = genHistory.map(t => `<div>${t}</div>`).join('');
+    }
+
+    const randomPin = () => String(Math.floor(1000 + Math.random() * 9000));
+    const accountId = n => `PLAYER-${String(n).padStart(3, '0')}`;
+
+    // 임시 계정을 무작위 PIN 으로 만듭니다. 기존 계정은 기본적으로 건너뜁니다.
+    async function createAccounts() {
+      const count = Math.round(Number(document.getElementById('genCount').value));
+      const start = Math.round(Number(document.getElementById('genStart').value));
+      const overwrite = document.getElementById('genOverwrite').checked;
+      if (!(count >= 1 && count <= 300) || !(start >= 1)) { alert('개수와 시작 번호를 확인하세요'); return; }
+
+      const ids = [];
+      for (let i = start; i < start + count; i++) ids.push(accountId(i));
+      const dup = ids.filter(id => allAccounts[id]);
+      const targets = overwrite ? ids : ids.filter(id => !allAccounts[id]);
+
+      if (targets.length === 0) {
+        alert(`만들 계정이 없습니다. ${dup.length}개가 이미 있습니다.\n덮어쓰려면 "기존 계정 덮어쓰기"를 체크하세요.`);
+        return;
+      }
+      let msg = `계정 ${targets.length}개를 만듭니다.\n${targets[0]} ~ ${targets[targets.length - 1]}`;
+      if (overwrite && dup.length) msg += `\n\n⚠️ 기존 ${dup.length}개를 덮어씁니다. 칩과 PIN 이 초기화되고 되돌릴 수 없습니다.`;
+      else if (dup.length) msg += `\n\n이미 있는 ${dup.length}개는 건너뜁니다.`;
+      if (!confirm(msg)) return;
+
+      const updates = {};
+      targets.forEach(id => {
+        updates[id] = { pin: randomPin(), chips: INITIAL_CHIPS, status: 'idle', loginTime: null };
+      });
+
+      try {
+        // accounts 아래로 범위를 좁혀 쓴다 (루트 update 는 규칙에 따라 거부될 수 있음)
+        await db.ref('accounts').update(updates);
+        logGen(`생성 ${targets.length}개 (${targets[0]} ~ ${targets[targets.length - 1]})${dup.length && !overwrite ? ` · ${dup.length}개 건너뜀` : ''}`);
+        alert(`✅ 계정 ${targets.length}개 생성 완료`);
+      } catch (e) {
+        console.error(e);
+        logGen(`생성 실패: ${e.message}`);
+        alert(`❌ 생성 실패\n\n${e.message}\n\nFirebase 콘솔의 규칙 탭에서 accounts 쓰기 권한을 확인하세요.`);
+      }
+    }
+
+    // 계정 1개 삭제
+    async function deleteAccount(id) {
+      const a = allAccounts[id] || {};
+      let warn = `${id} 계정을 삭제합니다.\n\n칩 ${(a.chips || 0).toLocaleString()} · 상태 ${a.status || '-'}`;
+      if (a.status === 'playing') warn += '\n\n⚠️ 지금 사용 중인 계정입니다.';
+      warn += '\n\n되돌릴 수 없습니다. 계속할까요?';
+      if (!confirm(warn)) return;
+      try {
+        await db.ref(`accounts/${id}`).remove();
+        logGen(`삭제 ${id}`);
+      } catch (e) {
+        console.error(e);
+        alert(`❌ 삭제 실패\n\n${e.message}`);
+      }
+    }
+
+    // 전체 삭제
+    async function deleteAllAccounts() {
+      const ids = Object.keys(allAccounts);
+      if (ids.length === 0) { alert('삭제할 계정이 없습니다'); return; }
+      const playing = ids.filter(id => allAccounts[id].status === 'playing').length;
+      let warn = `⚠️ 계정 ${ids.length}개를 모두 삭제합니다.`;
+      if (playing) warn += `\n\n사용 중인 계정이 ${playing}개 있습니다.`;
+      warn += '\n\n되돌릴 수 없습니다. 계속할까요?';
+      if (!confirm(warn)) return;
+      if (!confirm(`정말 ${ids.length}개를 전부 지울까요?\n\n행사 중이라면 취소하세요.`)) return;
+      try {
+        await db.ref('accounts').remove();
+        logGen(`전체 삭제 ${ids.length}개`);
+        alert(`✅ 계정 ${ids.length}개 삭제 완료`);
+      } catch (e) {
+        console.error(e);
+        logGen(`전체 삭제 실패: ${e.message}`);
+        alert(`❌ 삭제 실패\n\n${e.message}`);
+      }
     }
 
     // 전체 초기화
