@@ -27,7 +27,9 @@ function loseBias(chips) {
 }
 
 // 이번 라운드 계획: k=1이면 자연 확률, k=2면 두 번 뽑아 나쁜 쪽
+// 우대 계정이면 BOOST.k 번 뽑아 가장 좋은 쪽을 채택한다.
 function balancePlan(chips) {
+  if (BOOST.on) return { mode: 'best', k: BOOST.k };
   return Math.random() < loseBias(chips) ? { mode: 'worst', k: 2 } : { mode: 'best', k: 1 };
 }
 
@@ -75,3 +77,45 @@ function steerOutcome(chips, drawFn, netFn, opts) {
   }
   return chosen;
 }
+
+// ============ 계정 우대 (운영진 전용) ============
+// 관리자 페이지에서 계정별로 켜고 끕니다. 상태는 accounts/{id}/boost 에 저장되고
+// 게임 화면은 이 값을 실시간으로 구독합니다. 켜고 끈 기록은 chipLog 에 남습니다.
+// 켜져 있으면 balancePlan 이 후보 BOOST.k 개 중 가장 좋은 결과를 채택합니다.
+// 홀덤은 카드 전체가 아니라 플롭 3장만 고릅니다 (holdem.html 의 pickBoostFlop).
+// 지급 한도(payoutCaps)와 한 판 상한(maxWin)은 우대 중에도 그대로 적용됩니다.
+const BOOST = { on: false, k: 8 };
+
+function boostActive() { return BOOST.on; }
+
+// 우대 중임을 화면에 표시한다. 켜 둔 사실을 운영진과 플레이어가 모두 알 수 있어야 한다.
+function boostIndicator() {
+  let el = document.getElementById('boostBadge');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'boostBadge';
+    el.textContent = '⚙ 운영 우대 적용 중';
+    el.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:9999;pointer-events:none;'
+      + 'font-family:inherit;font-size:11px;font-weight:700;letter-spacing:0.3px;'
+      + 'color:#1a1206;background:linear-gradient(135deg,#a07d2e,#d4a843);'
+      + 'border-radius:999px;padding:5px 11px;box-shadow:0 2px 10px rgba(212,168,67,0.45);';
+    document.body.appendChild(el);
+  }
+  el.style.display = BOOST.on ? '' : 'none';
+}
+
+function boostInit() {
+  boostIndicator();
+  try {
+    const pid = typeof getCurrentPlayer === 'function' ? getCurrentPlayer() : null;
+    if (pid && typeof db !== 'undefined' && db) {
+      db.ref('accounts/' + pid + '/boost').on('value', snap => {
+        BOOST.on = !!snap.val();
+        boostIndicator();
+      });
+    }
+  } catch (e) {}
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boostInit);
+else boostInit();

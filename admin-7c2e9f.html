@@ -125,11 +125,12 @@
             <th>칩</th>
             <th>상품 등급</th>
             <th>칩 지급</th>
+            <th>우대</th>
             <th>관리</th>
           </tr>
         </thead>
         <tbody id="accountBody">
-          <tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-dim)">로딩 중...</td></tr>
+          <tr><td colspan="8" style="text-align:center; padding:40px; color:var(--text-dim)">로딩 중...</td></tr>
         </tbody>
       </table>
     </div>
@@ -218,7 +219,7 @@
         .sort(([a], [b]) => a.localeCompare(b));
 
       if (entries.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-dim)">계정이 없습니다</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:var(--text-dim)">계정이 없습니다</td></tr>';
         return;
       }
 
@@ -243,6 +244,10 @@
             <button class="give-btn plus" onclick="adjustChips('${id}', 500)">+500</button>
             <button class="give-btn minus" onclick="adjustChips('${id}', -100)">−100</button>
             <button class="give-btn custom" onclick="adjustCustom('${id}')">±</button>
+          </td>
+          <td>
+            <button class="give-btn ${data.boost ? 'plus' : 'custom'}" onclick="toggleBoost('${id}')"
+              title="켜면 이 계정의 모든 게임 결과가 유리하게 추첨됩니다">${data.boost ? '⚙ ON' : 'OFF'}</button>
           </td>
           <td>
             <button class="btn btn-outline btn-small" onclick="resetAccount('${id}')">초기화</button>
@@ -307,6 +312,19 @@
       logGive(`${id} ${amount > 0 ? '+' : ''}${amount.toLocaleString()} → ${after.toLocaleString()}`);
       return after;
     }
+    // 운영 우대 켜기/끄기. 켜진 계정은 모든 게임에서 결과를 8개 후보 중 가장 좋은 것으로 뽑습니다.
+    // 게임 화면 오른쪽 아래에 "운영 우대 적용 중" 배지가 뜨고, 켜고 끈 기록은 chipLog 에 남습니다.
+    async function toggleBoost(id) {
+      const now = !!(allAccounts[id] && allAccounts[id].boost);
+      const next = !now;
+      if (next && !confirm(`${id} 에 운영 우대를 켭니다.\n\n이 계정은 8개 게임 전부에서 유리하게 추첨됩니다.\n게임 화면에 우대 중이라는 배지가 표시됩니다.\n\n계속할까요?`)) return;
+      await db.ref(`accounts/${id}/boost`).set(next ? true : null);
+      try {
+        await db.ref('chipLog').push({ id, boost: next, at: firebase.database.ServerValue.TIMESTAMP });
+      } catch (e) {}
+      logGive(`${id} 운영 우대 ${next ? 'ON' : 'OFF'}`);
+    }
+
     async function adjustCustom(id) {
       const v = prompt(`${id} 에 지급할 칩 수를 입력하세요 (음수는 차감)\n현재: ${(allAccounts[id]?.chips || 0).toLocaleString()}`, '100');
       if (v === null) return;
