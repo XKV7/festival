@@ -204,7 +204,18 @@
 
     <div class="game-area">
       <div class="ip-title">🪶 INDIAN POKER</div>
-      <div class="ip-sub">딜러 임태현과 1:1 · 내 카드는 못 보고 상대 카드만 보인다 · 높은 숫자가 승리</div>
+      <div class="ip-sub" id="ipSub">딜러 임태현과 1:1 · 내 카드는 못 보고 상대 카드만 보인다 · 높은 숫자가 승리</div>
+
+      <div class="mode-bar">
+        <button class="mode-btn active" id="modeAi" onclick="setMode('ai')">🤵 임태현과 대결</button>
+        <button class="mode-btn" id="modePvp" onclick="setMode('pvp')">⚔️ 1:1 실시간 대결</button>
+      </div>
+      <div class="pvp-bar" id="pvpBar" style="display:none">
+        <span class="pv-state" id="pvpState">대기</span>
+        <span class="pv-opp" id="pvpOpp"></span>
+        <span class="pv-stacks" id="pvpStacks"></span>
+        <button class="btn btn-outline btn-small" id="pvpLeaveBtn" onclick="pvpLeave()">나가기</button>
+      </div>
 
       <div class="ip-score">
         <div class="score-box win"><div class="label">승</div><div class="value" id="scoreWin">0</div></div>
@@ -270,7 +281,7 @@
         </div>
         <div class="bet-note" id="betNote">한 라운드 최대 투입 = 단위 × 3</div>
         <div class="ip-actions">
-          <button class="btn btn-gold btn-big" id="startBtn" onclick="startRound()">START</button>
+          <button class="btn btn-gold btn-big" id="startBtn" onclick="pressStart()">START</button>
         </div>
         <div class="action-hint">스페이스바로도 START 할 수 있어요</div>
       </div>
@@ -279,20 +290,10 @@
       <div id="playPhase" style="display:none">
         <div class="ip-actions" id="actionRow"></div>
         <div class="action-hint" id="actionHint"></div>
+        <div class="turn-timer" id="turnTimer" style="display:none"><i></i></div>
       </div>
 
       <div class="ip-log" id="log"></div>
-
-      <div class="rules">
-        <h3>📋 룰</h3>
-        <p>
-          카드는 <b>1~10</b> (각 4장). 양쪽이 앤티를 내고 1장씩 받습니다. 내 카드는 이마에 붙인 것처럼 <b>나만 못 보고</b>, 상대 카드는 보입니다.<br>
-          <b>선</b>: 베팅 (단위만큼 추가) 또는 다이 (앤티 포기) → <b>후</b>: 콜 / 레이즈 (단위 2배) / 폴드 → 레이즈면 선: 콜 / 폴드<br>
-          카드 공개 → <b>높은 숫자 승리</b>, 팟 획득 · 같은 숫자면 무승부 (각자 투입금 반환) · 다이/폴드는 상대가 팟 획득<br>
-          선/후는 라운드마다 교대. 딜러 임태현은 내 카드와 내 행동만 보고 판단하며, 자기 카드는 보지 못합니다.<br>
-          플레이어가 팟을 가져갈 때 <b>팟의 8%</b>를 테이블 수수료로 뗍니다.
-        </p>
-      </div>
 
       <details class="rules" open>
         <summary>📖 인디언 포커 규칙 · 진행 방식</summary>
@@ -300,7 +301,7 @@
         <div class="rules-sec">
           <h4>게임의 핵심</h4>
           <ul>
-            <li>딜러 <b>임태현</b>과 1:1로 카드 <b>1장씩</b> 나눠 갖습니다.</li>
+            <li>딜러 <b>임태현</b>(AI) 또는 <b>다른 플레이어</b>와 1:1로 카드 <b>1장씩</b> 나눠 갖습니다. 화면 위에서 상대를 고릅니다.</li>
             <li><b>상대 카드는 나에게 보이고, 내 카드는 공개 전까지 보이지 않습니다.</b> 상대도 마찬가지로 내 카드만 봅니다.</li>
             <li>카드는 <b>1부터 10</b>까지이며 각 숫자마다 4장씩, 총 40장입니다. 숫자가 큰 쪽이 이깁니다.</li>
             <li>내 카드를 모르므로, 보이는 상대 카드와 상대의 행동으로 내 카드를 추리해야 합니다.</li>
@@ -340,6 +341,17 @@
           </ul>
         </div>
         <div class="rules-sec">
+          <h4>⚔️ 1:1 실시간 대결</h4>
+          <ul>
+            <li>화면 위의 <b>1:1 실시간 대결</b>을 누르면 같은 게임을 고른 다른 플레이어와 연결됩니다. 상대가 없으면 기다리다가 두 번째 사람이 오는 순간 시작합니다.</li>
+            <li><b>양쪽 스택은 항상 같습니다.</b> 시작 스택은 1,000칩이며, 둘 중 칩이 더 적은 쪽에 맞춰집니다. 입장하려면 최소 100칩이 필요합니다.</li>
+            <li>테이블 스택과 별개로 <b>매 판 끝날 때마다 실제 칩에 즉시 반영</b>됩니다. 도중에 나가도 그때까지의 결과는 그대로 남습니다.</li>
+            <li>한 번의 행동에 <b>30초</b>가 주어집니다. 막대가 줄어드는 동안 고르세요.</li>
+            <li><span class="warn">시간이 지나거나 상대가 나가면 자동으로 처리됩니다.</span> 낼 돈이 없으면 체크, 있으면 폴드로 넘어가고 남은 쪽이 팟을 가져갑니다.</li>
+            <li>한쪽 스택이 바닥나면 대결이 끝납니다. <b>나가기</b>를 누르면 언제든 중단할 수 있습니다.</li>
+          </ul>
+        </div>
+        <div class="rules-sec">
           <h4>전략 힌트</h4>
           <ul>
             <li><b>상대 카드가 낮으면(1~3)</b> 내 카드가 그보다 높을 확률이 큽니다. 공격적으로 가세요.</li>
@@ -371,6 +383,7 @@
   <script src="../js/firebase-config.js"></script>
   <script src="../js/site-config.js"></script>
   <script src="../js/balance.js"></script>
+  <script src="../js/multiplayer.js"></script>
   <script>
     // 로그인 체크
     if (!getCurrentPlayer()) window.location.href = '../index.html';
@@ -539,9 +552,19 @@
     function updateStartButton() {
       const btn = $('startBtn');
       const need = getBet() * MAX_ROUND_COST;
+      if (typeof mode !== 'undefined' && mode === 'pvp') {
+        $('betNote').textContent = `1:1 대결은 양쪽 스택을 같게 맞춥니다 (최대 ${MP_BUYIN.toLocaleString()} 칩) · 베팅 단위는 위 값에서 시작`;
+        if (currentChips < MP_MIN_CHIPS) { btn.disabled = true; btn.textContent = `칩 부족 (${MP_MIN_CHIPS} 필요)`; }
+        else { btn.disabled = false; btn.textContent = '⚔️ 상대 찾기'; }
+        return;
+      }
       $('betNote').textContent = `한 라운드 최대 투입 = 단위 × 3 = ${need.toLocaleString()} 칩`;
       if (currentChips < need) { btn.disabled = true; btn.textContent = `칩 부족 (${need.toLocaleString()} 필요)`; }
       else { btn.disabled = false; btn.textContent = 'START'; }
+    }
+    function pressStart() {
+      if (mode === 'pvp') return pvpStart();
+      return startRound();
     }
 
     // ============ AI 판단 ============
@@ -863,6 +886,359 @@
       $('resultSub').textContent += `  ·  다음 라운드는 내가 ${meFirst ? '선' : '후'}`;
     }
 
+    // ============ 1:1 실시간 대결 ============
+    // 두 클라이언트가 같은 카드 · 같은 행동 순서로 같은 진행을 돌립니다(록스텝).
+    // 호스트(A석)가 핸드마다 카드와 선/후를 올리고, 행동은 acts/{no}/{seq} 로 주고받습니다.
+    let mode = 'ai';
+    const TURN_MS = 30000;        // 한 번의 행동 제한 시간
+    const NEXT_HAND_MS = 3200;    // 다음 판까지 대기
+    const PVP = { on: false, myStack: 0, oppStack: 0, no: 0, unit: 0, abort: false, busy: false };
+
+    function oppName() { return MP.oppPid || '상대'; }
+    function setOppSeatName(text) {
+      const el = $('seatAi') && $('seatAi').querySelector('.seat-name');
+      if (!el) return;
+      // 자식 요소(딜러 버튼 배지 등)를 지우지 않도록 맨 앞 텍스트만 교체한다
+      const first = el.firstChild;
+      if (first && first.nodeType === 3) first.nodeValue = text + ' ';
+      else el.insertBefore(document.createTextNode(text + ' '), el.firstChild);
+    }
+    function pvpBar(state, cls) {
+      $('pvpState').textContent = state;
+      $('pvpBar').className = 'pvp-bar' + (cls ? ' ' + cls : '');
+      $('pvpOpp').textContent = MP.oppPid ? `vs ${MP.oppPid}` : '';
+      $('pvpStacks').innerHTML = PVP.on
+        ? `내 스택 <b>${PVP.myStack.toLocaleString()}</b> · 상대 <b>${PVP.oppStack.toLocaleString()}</b> · 단위 <b>${PVP.unit.toLocaleString()}</b>`
+        : '';
+    }
+
+    function setMode(m) {
+      if (PVP.on || PVP.busy) return;
+      mode = m;
+      $('modeAi').classList.toggle('active', m === 'ai');
+      $('modePvp').classList.toggle('active', m === 'pvp');
+      $('pvpBar').style.display = m === 'pvp' ? '' : 'none';
+      $('ipSub').textContent = m === 'pvp'
+        ? '다른 플레이어와 실시간 1:1 · 양쪽 스택 동일 · 내 카드는 못 보고 상대 카드만 보인다'
+        : '딜러 임태현과 1:1 · 내 카드는 못 보고 상대 카드만 보인다 · 높은 숫자가 승리';
+      setOppSeatName(m === 'pvp' ? '⚔️ 상대' : '🤵 ' + SITE.dealer);
+      if (m === 'pvp') pvpBar('대기', '');
+      updateStartButton();
+    }
+
+    // ---- 턴 타이머 ----
+    let timerHandle = null;
+    function startTurnTimer(deadline) {
+      const bar = $('turnTimer'), fill = bar.querySelector('i');
+      bar.style.display = '';
+      const tick = () => {
+        const remain = Math.max(0, deadline - mpNow());
+        fill.style.width = (remain / TURN_MS * 100) + '%';
+        bar.classList.toggle('low', remain < 8000);
+      };
+      tick();
+      timerHandle = setInterval(tick, 250);
+    }
+    function stopTurnTimer() {
+      if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+      $('turnTimer').style.display = 'none';
+    }
+
+    // 내 차례: 버튼을 띄우고 고른 행동을 반환. 제한 시간이 지나면 fallback.
+    function pvpMyTurn(choices, hint, deadline, fallback) {
+      return new Promise(resolve => {
+        let done = false;
+        const finish = act => {
+          if (done) return;
+          done = true;
+          clearInterval(poll);
+          stopTurnTimer();
+          disableActions();
+          resolve(act);
+        };
+        setActions(choices.map(c => ({
+          id: c.id, label: c.label, cls: c.cls, fn: () => finish(c.act)
+        })), hint);
+        setPhase('play');
+        startTurnTimer(deadline);
+        const poll = setInterval(() => {
+          if (mpNow() >= deadline) finish({ ...fallback, forced: true });
+        }, 300);
+      });
+    }
+
+    // 한 번의 행동을 확정합니다. 내 차례면 버튼, 상대 차례면 DB 대기(+시간 초과 시 대신 폴드).
+    async function pvpAct(seq, mine, choices, hint, fallback) {
+      const deadline = mpNow() + TURN_MS;
+      if (mine) {
+        const chosen = await pvpMyTurn(choices, hint, deadline, fallback);
+        return await mpPushAction(PVP.no, seq, chosen);
+      }
+      setActions([], hint);
+      setPhase('busy');
+      startTurnTimer(deadline);
+      const landed = await mpAwaitAction(PVP.no, seq, { deadline, fallback, goneFallback: fallback });
+      stopTurnTimer();
+      return landed;
+    }
+
+    // ---- 매칭 ----
+    async function pvpStart() {
+      if (PVP.busy || PVP.on) return;
+      const u = getBet();
+      if (currentChips < MP_MIN_CHIPS) {
+        showResult('칩이 부족합니다', `1:1 대결은 ${MP_MIN_CHIPS} 칩 이상 필요합니다`, 'result-lose');
+        return;
+      }
+      PVP.busy = true;
+      PVP.abort = false;
+      $('modeAi').disabled = true; $('modePvp').disabled = true;
+      setPhase('busy');
+      pvpBar('상대를 찾는 중', '');
+      showResult('상대를 찾는 중입니다', '다른 PC에서도 1:1 대결을 누르면 연결됩니다', '');
+      try {
+        const m = await mpFindMatch('indianPoker', currentChips, st => {
+          pvpBar(st === 'waiting' ? '상대 기다리는 중' : '상대를 찾는 중', '');
+        });
+        if (PVP.abort) { await mpLeave(); return pvpReset(); }
+        PVP.on = true;
+        PVP.myStack = m.stack;
+        PVP.oppStack = m.stack;
+        PVP.no = 0;
+        PVP.unit = Math.max(MIN_BET, Math.min(u, Math.floor(m.stack / MAX_ROUND_COST / BET_STEP) * BET_STEP));
+        setOppSeatName('⚔️ ' + oppName());
+        pvpBar('대결 시작', '');
+        log(`1:1 매칭 완료 · 상대 ${oppName()} · 양쪽 스택 ${m.stack}`);
+        showResult(`${oppName()} 와(과) 매칭되었습니다`, `양쪽 스택 ${m.stack.toLocaleString()} 칩 · 곧 시작합니다`, 'result-win');
+        await wait(1200);
+        await pvpLoop();
+      } catch (e) {
+        console.error(e);
+        showResult('연결에 실패했습니다', '잠시 후 다시 시도해주세요', 'result-lose');
+        await mpLeave();
+        pvpReset();
+      }
+    }
+
+    async function pvpLoop() {
+      while (PVP.on && !PVP.abort) {
+        if (await mpOpponentGone()) {
+          showResult('상대가 대결을 떠났습니다', '대결을 종료합니다', 'result-push');
+          break;
+        }
+        // 스택이 한 판을 감당하지 못하면 종료
+        const room = Math.floor(Math.min(PVP.myStack, PVP.oppStack) / MAX_ROUND_COST / BET_STEP) * BET_STEP;
+        if (room < MIN_BET) {
+          const iBroke = PVP.myStack <= PVP.oppStack;
+          showResult(iBroke ? '스택이 바닥났습니다' : '상대 스택이 바닥났습니다', '대결을 종료합니다', iBroke ? 'result-lose' : 'result-win');
+          break;
+        }
+        PVP.unit = Math.min(PVP.unit, room);
+        PVP.no++;
+        rounds++;
+        try {
+          await pvpHand();
+        } catch (e) {
+          console.error(e);
+          showResult('상대와 연결이 끊겼습니다', '대결을 종료합니다', 'result-lose');
+          break;
+        }
+        if (!PVP.on || PVP.abort) break;
+        pvpBar('다음 판 준비', '');
+        await wait(NEXT_HAND_MS);
+      }
+      await mpLeave();
+      pvpReset();
+    }
+
+    async function pvpHand() {
+      unit = PVP.unit;
+      meRaised = false;
+      ['meCard', 'aiCard'].forEach(id => { $(id).classList.remove('glow-win', 'glow-lose'); setFlipped(id, false, true); });
+      setAction('me', ''); setAction('ai', '');
+      setActions([], '');
+      setPhase('busy');
+
+      // 호스트가 카드와 선/후를 배분, 게스트는 받아감
+      let hand;
+      if (MP.isHost) {
+        const deck = [];
+        for (let n = 1; n <= 10; n++) for (let k = 0; k < 4; k++) deck.push(n);
+        const pick = () => deck.splice(Math.floor(Math.random() * deck.length), 1)[0];
+        hand = { first: PVP.no % 2 === 1 ? 'A' : 'B', cards: { A: pick(), B: pick() }, unit };
+        await mpPublishHand(PVP.no, hand);
+      } else {
+        pvpBar('카드 배분 중', '');
+        hand = await mpAwaitHand(PVP.no);
+      }
+      meCard = hand.cards[MP.mySeat];
+      aiCard = hand.cards[MP.oppSeat];
+      meFirst = hand.first === MP.mySeat;
+      unit = hand.unit || unit;
+
+      renderFront($('meFront'), meCard);
+      renderFront($('aiFront'), aiCard);
+
+      // 앤티
+      mePut = unit; aiPut = unit; pot = unit * 2;
+      renderTable();
+      pvpBar('진행 중', '');
+      playSfx('bet');
+      showResult('앤티 투입', `각 ${unit.toLocaleString()} 칩 · 내가 ${meFirst ? '선' : '후'}`, '');
+      log(`앤티 ${unit} × 2 · 내가 ${meFirst ? '선' : '후'}`);
+
+      $('aiScene').classList.add('deal'); $('meScene').classList.add('deal');
+      playSfx('card');
+      await wait(450);
+      $('aiScene').classList.remove('deal'); $('meScene').classList.remove('deal');
+      setFlipped('aiCard', true);
+      playSfx('card');
+      await wait(500);
+
+      // ---- seq 0 : 선의 행동 (BET / DIE) ----
+      let a = await pvpAct(0, meFirst,
+        [{ id: 'betBtn', label: `BET +${unit}`, cls: 'btn-bet', act: { type: 'bet' } },
+         { id: 'dieBtn', label: 'DIE', cls: 'btn-fold', act: { type: 'die' } }],
+        meFirst ? `당신이 선입니다 · 상대 카드 ${aiCard} · 30초 안에 선택` : `${oppName()} 의 차례입니다`,
+        { type: 'die' });
+      pvpApply(a, meFirst ? 'me' : 'ai');
+      if (a.type === 'die') return pvpFinish(meFirst ? 'me-fold' : 'ai-fold', a.forced);
+
+      // ---- seq 1 : 후의 대응 (CALL / RAISE / FOLD) ----
+      const secondIsMe = !meFirst;
+      const canRaise = Math.min(PVP.myStack, PVP.oppStack) >= unit * 3;
+      const ch = [{ id: 'callBtn', label: `CALL +${unit}`, cls: 'btn-call', act: { type: 'call' } }];
+      if (canRaise) ch.push({ id: 'raiseBtn', label: `RAISE +${unit * 2}`, cls: 'btn-raise', act: { type: 'raise' } });
+      ch.push({ id: 'foldBtn', label: 'FOLD', cls: 'btn-fold', act: { type: 'fold' } });
+      a = await pvpAct(1, secondIsMe, ch,
+        secondIsMe ? `상대가 베팅했습니다 · 상대 카드 ${aiCard}` : `${oppName()} 의 차례입니다`,
+        { type: 'fold' });
+      pvpApply(a, secondIsMe ? 'me' : 'ai');
+      if (a.type === 'fold') return pvpFinish(secondIsMe ? 'me-fold' : 'ai-fold', a.forced);
+      if (a.type === 'call') return pvpShowdown();
+
+      // ---- seq 2 : 레이즈를 마주한 선 (CALL / FOLD) ----
+      a = await pvpAct(2, meFirst,
+        [{ id: 'callBtn', label: `CALL +${unit}`, cls: 'btn-call', act: { type: 'call' } },
+         { id: 'foldBtn', label: 'FOLD', cls: 'btn-fold', act: { type: 'fold' } }],
+        meFirst ? `상대가 레이즈했습니다 · 상대 카드 ${aiCard}` : `${oppName()} 의 차례입니다`,
+        { type: 'fold' });
+      pvpApply(a, meFirst ? 'me' : 'ai');
+      if (a.type === 'fold') return pvpFinish(meFirst ? 'me-fold' : 'ai-fold', a.forced);
+      return pvpShowdown();
+    }
+
+    // 확정된 행동을 팟/투입금에 반영하고 화면에 표시
+    function pvpApply(a, who) {
+      const add = a.type === 'bet' || a.type === 'call' ? unit : a.type === 'raise' ? unit * 2 : 0;
+      if (add) {
+        if (who === 'me') mePut += add; else aiPut += add;
+        pot += add;
+        playSfx('chip');
+      }
+      const label = { bet: `BET +${unit}`, call: `CALL +${unit}`, raise: `RAISE +${unit * 2}`, fold: 'FOLD', die: 'DIE' }[a.type];
+      const cls = { bet: 'bet', call: 'call', raise: 'raise', fold: 'fold', die: 'fold' }[a.type];
+      setAction(who, label + (a.forced ? ' (시간 초과)' : ''), cls);
+      if (who === 'me' && a.type === 'raise') meRaised = true;
+      renderTable();
+      log(`${who === 'me' ? '나' : oppName()} ${label}${a.forced ? ' (자동)' : ''}`);
+    }
+
+    async function pvpShowdown() {
+      setTurn(null);
+      showResult('카드 공개!', '', '');
+      await wait(400);
+      setFlipped('meCard', true);
+      playSfx('card');
+      await wait(700);
+      if (meCard > aiCard) return pvpFinish('me-win');
+      if (meCard < aiCard) return pvpFinish('ai-win');
+      return pvpFinish('tie');
+    }
+
+    // 정산: 먼저 트랜잭션을 잡은 쪽이 양쪽 계정에 한 번만 반영
+    async function pvpFinish(outcome, forced) {
+      stopTurnTimer();
+      setTurn(null);
+      const rake = Math.floor(pot * RAKE);
+      const iWin = outcome === 'me-win' || outcome === 'ai-fold';
+      const iLose = outcome === 'ai-win' || outcome === 'me-fold';
+      let myNet, oppNet;
+      if (outcome === 'tie') { myNet = 0; oppNet = 0; }
+      else if (iWin) { myNet = pot - rake - mePut; oppNet = -aiPut; }
+      else { myNet = -mePut; oppNet = pot - rake - aiPut; }
+
+      let msg, sub, cls;
+      const detail = `내 카드 ${meCard} vs ${oppName()} ${aiCard}`;
+      if (outcome === 'me-win') {
+        msg = `🎉 승리! +${myNet.toLocaleString()} 칩`; sub = `${detail} · 팟 ${pot.toLocaleString()}${rake ? ` (수수료 ${rake})` : ''}`; cls = 'result-win';
+        $('meCard').classList.add('glow-win'); $('aiCard').classList.add('glow-lose');
+        score.win++; playSfx('win');
+      } else if (outcome === 'ai-fold') {
+        msg = `✅ ${oppName()} 포기 · +${myNet.toLocaleString()} 칩`;
+        sub = `${forced ? '상대 시간 초과 · ' : ''}팟 ${pot.toLocaleString()}${rake ? ` (수수료 ${rake})` : ''} · 내 카드는 ${meCard}였습니다`;
+        cls = 'result-win';
+        setFlipped('meCard', true);
+        $('meCard').classList.add('glow-win');
+        score.win++; playSfx('win');
+      } else if (outcome === 'ai-win') {
+        msg = `❌ 패배... ${myNet.toLocaleString()} 칩`; sub = detail; cls = 'result-lose';
+        $('meCard').classList.add('glow-lose'); $('aiCard').classList.add('glow-win');
+        score.lose++; playSfx('lose');
+      } else if (outcome === 'me-fold') {
+        msg = `🏳️ 포기 · ${myNet.toLocaleString()} 칩`;
+        sub = `${forced ? '시간 초과로 자동 처리 · ' : ''}내 카드는 ${meCard}였습니다 (${oppName()} ${aiCard})`;
+        cls = 'result-lose';
+        setFlipped('meCard', true);
+        $('aiCard').classList.add('glow-win');
+        score.lose++; playSfx('lose');
+      } else {
+        msg = '🤝 무승부 · 투입금 반환'; sub = detail; cls = 'result-push';
+        score.tie++; playSfx('chip');
+      }
+
+      score.net += myNet;
+      renderScore();
+      showResult(msg, sub, cls);
+      log(`${iWin ? '승' : iLose ? '패' : '무'} · 손익 ${myNet > 0 ? '+' : ''}${myNet} (카드 ${meCard} vs ${aiCard})`);
+
+      PVP.myStack += myNet;
+      PVP.oppStack += oppNet;
+      try {
+        await mpSettle(PVP.no, { [MP.myPid]: myNet, [MP.oppPid]: oppNet });
+      } catch (e) {
+        console.error('정산 실패', e);
+        showResult('⚠️ 칩 반영 오류', '네트워크를 확인해주세요', 'result-lose');
+      }
+      pvpBar('진행 중', '');
+      pot = 0; mePut = 0; aiPut = 0;
+      await wait(600);
+      renderTable();
+    }
+
+    async function pvpLeave() {
+      PVP.abort = true;
+      PVP.on = false;
+      stopTurnTimer();
+      showResult('대결에서 나갔습니다', '', '');
+      await mpLeave();
+      pvpReset();
+    }
+
+    function pvpReset() {
+      PVP.on = false; PVP.busy = false; PVP.abort = false;
+      PVP.myStack = 0; PVP.oppStack = 0; PVP.no = 0;
+      MP.oppPid = null;
+      stopTurnTimer();
+      $('modeAi').disabled = false; $('modePvp').disabled = false;
+      setOppSeatName(mode === 'pvp' ? '⚔️ 상대' : '🤵 ' + SITE.dealer);
+      pot = 0; mePut = 0; aiPut = 0;
+      setAction('me', ''); setAction('ai', '');
+      renderTable();
+      setPhase('bet');
+      if (mode === 'pvp') pvpBar('대기', '');
+    }
+
     // ============ 초기화 ============
     renderTable();
     renderScore();
@@ -870,7 +1246,7 @@
 
     document.addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT') return;
-      if (phase === 'bet' && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); startRound(); return; }
+      if (phase === 'bet' && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); pressStart(); return; }
       if (phase !== 'play') return;
       const k = e.key.toLowerCase();
       const click = id => { const b = $(id); if (b && !b.disabled) b.click(); };
