@@ -19,10 +19,27 @@ const MP = {
   _refs: [],
   _beat: null,
   _offset: 0,            // 서버 시간 - 로컬 시간
-  oppLeft: false
+  _waiters: [],          // 진행 중인 대기 약속의 취소 함수
+  oppLeft: false,
+  aborted: false
 };
 
-const MP_BUYIN = 1000;       // 1:1 기본 바이인 (양쪽 동일)
+// 나가기를 누르면 대기 중인 약속을 모두 깨워 루프가 깨끗하게 끝나도록 한다
+const MP_ABORT = 'mp-aborted';
+function mpIsAbort(e) { return e && e.message === MP_ABORT; }
+function mpRegisterWaiter(cancel) {
+  MP._waiters.push(cancel);
+  return () => {
+    const i = MP._waiters.indexOf(cancel);
+    if (i >= 0) MP._waiters.splice(i, 1);
+  };
+}
+function mpCancelAll() {
+  const list = MP._waiters.slice();
+  MP._waiters = [];
+  list.forEach(c => { try { c(); } catch (e) {} });
+}
+
 const MP_MIN_CHIPS = 100;    // 이 미만이면 1:1 입장 불가
 const MP_BEAT_MS = 3000;     // 하트비트 주기
 const MP_STALE_MS = 12000;   // 이 시간 넘게 신호가 없으면 이탈로 봄
@@ -48,6 +65,8 @@ async function mpFindMatch(game, myChips, onWait) {
   MP.game = game;
   MP.myPid = getCurrentPlayer();
   MP.oppLeft = false;
+  MP.aborted = false;
+  MP._waiters = [];
   await mpSyncClock();
 
   if (onWait) onWait('searching');
@@ -75,10 +94,11 @@ async function mpFindMatch(game, myChips, onWait) {
     MP.mySeat = 'B'; MP.oppSeat = 'A';
     MP.isHost = false;
     MP.oppPid = t.seats.A.pid;
-    MP.stack = Math.max(0, Math.min(MP_BUYIN, myChips, t.seats.A.chips || 0));
-    await mpRef().update({ status: 'ready', stack: MP.stack, startedAt: firebase.database.ServerValue.TIMESTAMP });
+    MP.stack = Math.max(0, myChips);
+    MP.oppStack = Math.max(0, t.seats.A.chips || 0);
+    await mpRef().update({ status: 'ready', startedAt: firebase.database.ServerValue.TIMESTAMP });
     mpAttach();
-    return { stack: MP.stack, opponent: MP.oppPid, host: false };
+    return { myStack: MP.stack, oppStack: MP.oppStack, opponent: MP.oppPid, host: false };
   }
 
   // 2) 없으면 새 테이블을 만들고 상대를 기다림
@@ -95,17 +115,22 @@ async function mpFindMatch(game, myChips, onWait) {
   if (onWait) onWait('waiting');
 
   // B석이 찰 때까지 대기
-  const seatB = await new Promise(resolve => {
+  const seatB = await new Promise((resolve, reject) => {
     const r = mpRef('seats/B');
+    let done = false;
     const cb = r.on('value', snap => {
-      if (snap.val()) { r.off('value', cb); resolve(snap.val()); }
+      if (done || !snap.val()) return;
+      done = true; unregister(); r.off('value', cb); resolve(snap.val());
     });
+    const cancel = () => { if (done) return; done = true; r.off('value', cb); reject(new Error(MP_ABORT)); };
+    const unregister = mpRegisterWaiter(cancel);
     MP._refs.push(() => r.off('value', cb));
   });
   MP.oppPid = seatB.pid;
-  MP.stack = Math.max(0, Math.min(MP_BUYIN, myChips, seatB.chips || 0));
-  await mpRef().update({ status: 'ready', stack: MP.stack, startedAt: firebase.database.ServerValue.TIMESTAMP });
-  return { stack: MP.stack, opponent: MP.oppPid, host: true };
+  MP.stack = Math.max(0, myChips);
+  MP.oppStack = Math.max(0, seatB.chips || 0);
+  await mpRef().update({ status: 'ready', startedAt: firebase.database.ServerValue.TIMESTAMP });
+  return { myStack: MP.stack, oppStack: MP.oppStack, opponent: MP.oppPid, host: true };
 }
 
 // 하트비트 · 이탈 감지 부착
@@ -136,11 +161,16 @@ async function mpPublishHand(no, data) {
 function mpAwaitHand(no, timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
     const r = mpRef(`hands/${no}`);
-    const timer = setTimeout(() => { r.off('value', cb); reject(new Error('hand-timeout')); }, timeoutMs);
+    let done = false;
+    const stop = () => { done = true; clearTimeout(timer); r.off('value', cb); unregister(); };
+    const timer = setTimeout(() => { if (done) return; stop(); reject(new Error('hand-timeout')); }, timeoutMs);
     const cb = r.on('value', snap => {
       const v = snap.val();
-      if (v) { clearTimeout(timer); r.off('value', cb); resolve(v); }
+      if (done || !v) return;
+      stop(); resolve(v);
     });
+    const cancel = () => { if (done) return; stop(); reject(new Error(MP_ABORT)); };
+    const unregister = mpRegisterWaiter(cancel);
     MP._refs.push(() => { clearTimeout(timer); r.off('value', cb); });
   });
 }
@@ -160,16 +190,13 @@ async function mpPushAction(no, seq, action) {
 // goneFallback(보통 폴드)을 씁니다. 단순히 늦은 것과 나가 버린 것을 구분하기 위함입니다.
 function mpAwaitAction(no, seq, opts = {}) {
   const { deadline = null, fallback = null, goneFallback = null, onTick = null, graceMs = 2500 } = opts;
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     const r = mpRef(`acts/${no}/${seq}`);
     let done = false, ticker = null;
-    const finish = v => {
-      if (done) return;
-      done = true;
-      if (ticker) clearInterval(ticker);
-      r.off('value', cb);
-      resolve(v);
-    };
+    const stop = () => { done = true; if (ticker) clearInterval(ticker); r.off('value', cb); unregister(); };
+    const finish = v => { if (done) return; stop(); resolve(v); };
+    const cancel = () => { if (done) return; stop(); reject(new Error(MP_ABORT)); };
+    const unregister = mpRegisterWaiter(cancel);
     const cb = r.on('value', snap => { if (snap.val()) finish(snap.val()); });
     if (deadline && fallback) {
       ticker = setInterval(async () => {
@@ -218,17 +245,24 @@ async function mpBothPresent() {
 
 // ---- 퇴장 ----
 async function mpLeave() {
+  MP.aborted = true;
+  mpCancelAll();                 // 대기 중인 약속을 깨워 게임 루프가 멈추게 한다
   if (MP._beat) { clearInterval(MP._beat); MP._beat = null; }
   MP._refs.forEach(off => { try { off(); } catch (e) {} });
   MP._refs = [];
   if (MP.tableId) {
     try {
       await mpRef(`seats/${MP.mySeat}/beat`).set(0);
-      await mpRef().update({ status: 'closed' });
+      // 아직 상대가 없던 방이면 통째로 지우고, 아니면 닫힘 표시만 남긴다
+      const snap = await mpRef('seats').once('value');
+      const seats = snap.val() || {};
+      if (!seats[MP.oppSeat]) await mpRef().remove();
+      else await mpRef().update({ status: 'closed' });
     } catch (e) {}
   }
   MP.joined = false;
   MP.tableId = null;
+  MP.oppPid = null;
 }
 
 // 페이지를 떠날 때 자리 비움 표시
