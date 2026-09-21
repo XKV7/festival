@@ -966,8 +966,10 @@
         const a = evaluateBest(me.concat(board)), b = evaluateBest(ai.concat(board));
         return a > b ? 1 : a < b ? -1 : 0;
       };
+      // 우대 중에는 덱 전체를 고르지 않는다. 홀카드는 자연 확률로 두고 플롭만 조정한다.
       H = {
-        deck: pvpHand ? [] : steerOutcome(currentChips, freshDeck, showdownNet), board: [], me: [], ai: [],
+        deck: pvpHand ? [] : (boostActive() ? freshDeck() : steerOutcome(currentChips, freshDeck, showdownNet)),
+        board: [], me: [], ai: [],
         pot: 0, committed: { me: 0, ai: 0 }, streetBet: { me: 0, ai: 0 },
         stack: pvpHand ? { me: PVP.myStack, ai: PVP.oppStack } : { me: currentChips, ai: aiStack },
         allin: { me: false, ai: false },
@@ -1034,8 +1036,29 @@
       return endHand();
     }
 
+    // 우대 중일 때 쓰는 플롭 고르기.
+    // 남은 카드에서 3장짜리 후보를 BOOST.k 개 뽑아, 우대 대상의 패가 상대보다 가장 앞서는 조합을 고른다.
+    // 홀카드와 턴·리버는 손대지 않는다.
+    function pickBoostFlop(pool, favHole, foeHole) {
+      let best = null, bestScore = -Infinity;
+      for (let i = 0; i < BOOST.k; i++) {
+        const rest = pool.slice();
+        const flop = [];
+        for (let k = 0; k < 3; k++) flop.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]);
+        const score = evaluateBest(favHole.concat(flop)) - evaluateBest(foeHole.concat(flop));
+        if (score > bestScore) { bestScore = score; best = flop; }
+      }
+      return best;
+    }
+
     async function dealBoard(n) {
       const board = $('board');
+      // 플롭(첫 3장)에만 적용. AI 모드는 여기서, 1:1 은 카드를 올릴 때 호스트가 처리한다.
+      if (n === 3 && H.board.length === 0 && !PVP.on && boostActive()) {
+        const flop = pickBoostFlop(H.deck, H.me, H.ai);
+        flop.forEach(c => { const i = H.deck.findIndex(x => sameCard(x, c)); if (i >= 0) H.deck.splice(i, 1); });
+        H.deck.push(...flop.slice().reverse());   // pop 순서 = 고른 플롭
+      }
       for (let k = 0; k < n; k++) {
         const c = PVP.on ? pvpBoard.shift() : H.deck.pop();
         H.board.push(c);
@@ -1302,10 +1325,21 @@
         try {
           if (MP.isHost) {
             const d = freshDeck();
+            const cards = { A: [d.pop(), d.pop()], B: [d.pop(), d.pop()] };
+            let flop;
+            // 한쪽만 우대 대상이면 그쪽에 유리한 플롭을 고른다. 양쪽 다이거나 아무도 아니면 자연 확률.
+            const favSeat = boostActive() && !MP.oppBoost ? MP.mySeat
+                          : MP.oppBoost && !boostActive() ? MP.oppSeat : null;
+            if (favSeat) {
+              flop = pickBoostFlop(d, cards[favSeat], cards[favSeat === 'A' ? 'B' : 'A']);
+              flop.forEach(c => { const i = d.findIndex(x => sameCard(x, c)); if (i >= 0) d.splice(i, 1); });
+            } else {
+              flop = [d.pop(), d.pop(), d.pop()];
+            }
             hand = {
               button: PVP.no % 2 === 1 ? 'A' : 'B',
-              cards: { A: [d.pop(), d.pop()], B: [d.pop(), d.pop()] },
-              board: [d.pop(), d.pop(), d.pop(), d.pop(), d.pop()]
+              cards,
+              board: [...flop, d.pop(), d.pop()]
             };
             await mpPublishHand(PVP.no, hand);
           } else {

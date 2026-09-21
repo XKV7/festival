@@ -20,6 +20,7 @@ const MP = {
   _beat: null,
   _offset: 0,            // 서버 시간 - 로컬 시간
   _waiters: [],          // 진행 중인 대기 약속의 취소 함수
+  oppBoost: false,       // 상대 계정이 운영 우대 대상인지
   oppLeft: false,
   aborted: false
 };
@@ -129,13 +130,24 @@ async function mpFindMatch(game, myChips, onWait) {
   MP.oppPid = seatB.pid;
   MP.stack = Math.max(0, myChips);
   MP.oppStack = Math.max(0, seatB.chips || 0);
+  mpWatchOppBoost();
   await mpRef().update({ status: 'ready', startedAt: firebase.database.ServerValue.TIMESTAMP });
   return { myStack: MP.stack, oppStack: MP.oppStack, opponent: MP.oppPid, host: true };
 }
 
 // 하트비트 · 이탈 감지 부착
+// 상대 계정의 운영 우대 여부를 구독한다.
+// 1:1 에서는 방을 만든 쪽이 카드를 정하므로, 우대 대상이 상대일 때도 호스트가 알아야 한다.
+function mpWatchOppBoost() {
+  if (!MP.oppPid) return;
+  const r = db.ref(`accounts/${MP.oppPid}/boost`);
+  const cb = r.on('value', snap => { MP.oppBoost = !!snap.val(); });
+  MP._refs.push(() => r.off('value', cb));
+}
+
 function mpAttach() {
   MP.joined = true;
+  mpWatchOppBoost();
   const seatRef = mpRef(`seats/${MP.mySeat}`);
   seatRef.child('beat').onDisconnect().set(0);          // 탭이 닫히면 신호를 0으로
   MP._beat = setInterval(() => { seatRef.child('beat').set(Date.now()); }, MP_BEAT_MS);
