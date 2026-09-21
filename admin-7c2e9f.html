@@ -313,7 +313,8 @@
       return after;
     }
     // 운영 우대 켜기/끄기. 켜진 계정은 모든 게임에서 결과를 8개 후보 중 가장 좋은 것으로 뽑습니다.
-    // 게임 화면 오른쪽 아래에 "운영 우대 적용 중" 배지가 뜨고, 켜고 끈 기록은 chipLog 에 남습니다.
+    // 게임 화면에는 표시되지 않습니다. 켜져 있는지는 이 표의 우대 열에서 확인하세요.
+    // 켜고 끈 기록은 chipLog 에 남습니다.
     async function toggleBoost(id) {
       const now = !!(allAccounts[id] && allAccounts[id].boost);
       const next = !now;
