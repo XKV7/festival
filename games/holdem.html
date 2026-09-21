@@ -550,7 +550,7 @@
     let H = null;             // 현재 핸드
     let handNo = 0;
     const score = { hands: 0, win: 0, lose: 0, net: 0 };
-    const tendency = { betsFaced: 0, folds: 0, showdownsSeen: 0 };
+    const tendency = { betsFaced: 0, folds: 0, showdownsSeen: 0, bigFaced: 0, spotsFaced: 0 };
     let pendingResolve = null;
 
     // ---- 1:1 실시간 대결 상태 ----
@@ -845,10 +845,12 @@
     })();
 
     // 플레이어 프리플롭 행동으로 추정한 레인지 하한 (프리플롭 승률 기준)
+    // 올인·대형 베팅을 남발하는 상대는 레인지가 넓으므로 하한을 그만큼 낮춘다.
+    // 매번 올인하는 상대에게 "좋은 패만 들어온다"고 가정하면 계속 접게 된다.
     function oppRangeFloor() {
-      if (H.meActions.preflop === 'raise') return 0.48;
-      if (H.meActions.preflop === 'call') return 0.40;
-      return 0;
+      const base = H.meActions.preflop === 'raise' ? 0.48
+                 : H.meActions.preflop === 'call' ? 0.40 : 0;
+      return base * (1 - bigBetRate());
     }
     // 몬테카를로 에퀴티: 상대 레인지 + 남은 보드 무작위
     function mcEquity(hole, board, floor) {
@@ -873,6 +875,12 @@
     }
     function foldRate() { return tendency.betsFaced >= 8 ? tendency.folds / tendency.betsFaced : 0.45; }
 
+    // 플레이어가 큰 베팅(사실상 올인)을 던지는 비율. 표본이 쌓이기 전에는 0으로 두어
+    // 평소 플레이에는 영향을 주지 않는다.
+    function bigBetRate() {
+      return tendency.spotsFaced >= 5 ? tendency.bigFaced / tendency.spotsFaced : 0;
+    }
+
     function aiRaiseTo(fraction) {
       // 콜 후 팟의 fraction 만큼 레이즈
       const tc = toCall('ai');
@@ -892,6 +900,12 @@
       const potOdds = tc > 0 ? tc / (pot + tc) : 0;
       let act;
 
+      // 플레이어가 큰 베팅을 던진 빈도를 기록한다 (올인 남발 대응용)
+      if (tc > 0) {
+        tendency.spotsFaced++;
+        if (tc > stack * 0.35 || tc > 8 * BB) tendency.bigFaced++;
+      }
+
       if (H.street === 'preflop') {
         const eq = preflopEq(H.ai);
         const raisedByMe = H.streetBet.ai > BB;   // AI가 이미 이번 스트리트에 레이즈함
@@ -907,12 +921,20 @@
         } else {
           // 레이즈/3벳을 마주함
           const big = tc > stack * 0.35 || tc > 8 * BB;
-          if (eq >= 0.66) act = big ? { type: 'raise', to: maxRaiseTo('ai') } : { type: 'raise', to: aiRaiseTo(1.0) };
-          else if (eq >= 0.60) act = big ? (eq - 0.06 > potOdds ? { type: 'call' } : { type: 'fold' }) : (chance(0.35) ? { type: 'raise', to: aiRaiseTo(0.9) } : { type: 'call' });
-          else if (eq >= 0.50 && !big) act = { type: 'call' };
+          const br = bigBetRate();
+          // 콜에 필요한 승률. 상대가 올인을 남발할수록 레인지가 넓어지므로 팟 오즈까지 내려간다.
+          // br=0 이면 potOdds+0.10 (신중), br=1 이면 potOdds-0.02 (거의 팟 오즈 그대로).
+          const needCall = Math.max(0.40, potOdds + 0.10 - br * 0.12);
+          // 되받아칠 기준도 함께 내린다. 매번 올인하는 상대에게는 중간 패로도 받아야 한다.
+          const needShove = 0.66 - br * 0.12;
+
+          if (eq >= needShove) act = big ? { type: 'raise', to: maxRaiseTo('ai') } : { type: 'raise', to: aiRaiseTo(1.0) };
+          else if (big) act = eq >= needCall ? { type: 'call' } : { type: 'fold' };
+          else if (eq >= 0.60) act = chance(0.35) ? { type: 'raise', to: aiRaiseTo(0.9) } : { type: 'call' };
+          else if (eq >= 0.50) act = { type: 'call' };
           else if (eq >= 0.44 && tc <= 3 * BB) act = { type: 'call' };
           else if (eq - 0.05 > potOdds && tc <= 5 * BB) act = { type: 'call' };
-          else act = chance(0.06) && !big ? { type: 'raise', to: aiRaiseTo(1.0) } : { type: 'fold' };
+          else act = chance(0.06) ? { type: 'raise', to: aiRaiseTo(1.0) } : { type: 'fold' };
         }
       } else {
         const eq = mcEquity(H.ai, H.board, oppRangeFloor());
