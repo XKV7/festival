@@ -377,6 +377,13 @@
           </ul>
         </div>
         <div class="rules-sec">
+          <h4>한 판 획득 상한</h4>
+          <ul>
+            <li><b>한 번의 판에서 가져갈 수 있는 순이익은 4,300칩까지입니다.</b> 그보다 많이 나와도 4,300칩만 지급됩니다.</li>
+            <li>모든 게임에 공통으로 적용됩니다. 상한에 걸리면 결과 문구에 표시됩니다.</li>
+          </ul>
+        </div>
+        <div class="rules-sec">
           <h4>전략 힌트</h4>
           <ul>
             <li>헤즈업은 6~9인 테이블보다 <b>훨씬 넓은 범위의 카드로 플레이</b>합니다. A-7이나 K-9도 충분히 좋은 패입니다.</li>
@@ -1078,7 +1085,7 @@
       let net = 0, msg, cls;
       const rake = Math.floor(pot * RAKE);
       if (winner === 'me') {
-        net = pot - rake - H.committed.me;
+        net = capWin(pot - rake - H.committed.me);      // 한 판 획득 상한
         msg = `🎉 승리! +${net.toLocaleString()} 칩`; cls = 'result-win';
         detail += ` · 팟 ${pot.toLocaleString()}${rake ? ` (수수료 ${rake})` : ''}`;
         score.win++; playSfx('win');
@@ -1087,7 +1094,7 @@
         msg = `❌ 패배... ${net.toLocaleString()} 칩`; cls = 'result-lose';
         score.lose++; playSfx('lose');
       } else {
-        net = Math.floor(pot / 2) - H.committed.me;
+        net = capWin(Math.floor(pot / 2) - H.committed.me);   // 한 판 획득 상한
         msg = '🤝 무승부 · 팟 분배'; cls = 'result-push';
         playSfx('chip');
       }
@@ -1102,11 +1109,12 @@
 
       if (PVP.on) {
         // 상대 순손익도 같이 계산해 한쪽이 양쪽 계정에 한 번만 반영
-        const oppNet = winner === 'ai' ? pot - rake - H.committed.ai
+        const oppNet = winner === 'ai' ? capWin(pot - rake - H.committed.ai)
                      : winner === 'me' ? -H.committed.ai
-                     : (pot - Math.floor(pot / 2)) - H.committed.ai;
-        PVP.myStack = H.stack.me + (winner === 'me' ? pot - rake : winner === 'tie' ? Math.floor(pot / 2) : 0);
-        PVP.oppStack = H.stack.ai + (winner === 'ai' ? pot - rake : winner === 'tie' ? pot - Math.floor(pot / 2) : 0);
+                     : capWin((pot - Math.floor(pot / 2)) - H.committed.ai);
+        // 스택은 상한이 적용된 순손익 기준으로 갱신해야 실제 칩과 어긋나지 않는다
+        PVP.myStack = H.stack.me + H.committed.me + net;
+        PVP.oppStack = H.stack.ai + H.committed.ai + oppNet;
         try {
           await mpSettle(PVP.no, { [MP.myPid]: net, [MP.oppPid]: oppNet });
         } catch (e) {

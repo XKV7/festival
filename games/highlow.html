@@ -381,6 +381,13 @@
           </ul>
         </div>
         <div class="rules-sec">
+          <h4>한 판 획득 상한</h4>
+          <ul>
+            <li><b>한 번의 판에서 가져갈 수 있는 순이익은 4,300칩까지입니다.</b> 그보다 많이 나와도 4,300칩만 지급됩니다.</li>
+            <li>모든 게임에 공통으로 적용됩니다. 상한에 걸리면 결과 문구에 표시됩니다.</li>
+          </ul>
+        </div>
+        <div class="rules-sec">
           <h4>연승 배율</h4>
           <table class="rules-table">
             <tr><th>연승</th><th>배율 (총 지급)</th><th>100칩 기준 순이익</th></tr>
@@ -642,7 +649,7 @@
         const mult = multFor(streak);
         showResult(
           `✅ 정답! ${streak}연승`,
-          `현재 배율 x${mult} · 지금 확정하면 +${applyFee(Math.floor(bet * mult) - bet).toLocaleString()} 칩`,
+          `현재 배율 x${mult} · 지금 확정하면 +${capWin(applyFee(Math.floor(bet * mult) - bet)).toLocaleString()} 칩`,
           'result-win'
         );
         renderStatus();
@@ -681,12 +688,13 @@
       setPhase('busy');
       const mult = multFor(streak);
       const total = Math.floor(bet * mult);
-      const net = applyFee(total - bet);   // 승리 순이익 수수료
+      const rawNet = applyFee(total - bet);           // 승리 순이익 수수료
+      const net = capWin(rawNet);                     // 한 판 획득 상한
       playSfx('chip');
       $('curCard').classList.add('win-glow');
       showResult(
         `💰 수익 확정! +${net.toLocaleString()} 칩`,
-        `${streak}연승 · x${mult} · 수수료 5% 차감`,
+        `${streak}연승 · x${mult} · 수수료 5% 차감` + (net > 0 && net !== rawNet ? ' · 1회 상한 4,300칩 적용' : ''),
         'result-win'
       );
       await settle(net);

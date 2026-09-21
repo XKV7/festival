@@ -321,6 +321,7 @@
             <li>한 판에 받을 수 있는 배율에 한도가 있습니다. 여기서 배율은 <b>이번 판 총 지급액 ÷ 이번 판 총 베팅액</b>입니다.</li>
             <li>크게 걸수록 한도가 낮아집니다. 한도를 넘는 결과는 <span class="warn">아예 나오지 않습니다.</span></li>
             <li>여러 곳에 나눠 걸면 총 베팅이 늘어 지급 비율이 낮아지므로, 오히려 한도에 걸리지 않을 수 있습니다.</li>
+            <li><b>한 판 획득 상한 4,300칩.</b> 한 번의 판에서 순이익이 4,300칩을 넘으면 4,300칩까지만 지급됩니다.</li>
           </ul>
           <table class="rules-table">
             <tr><th>이번 판 총 베팅</th><th>허용 배율</th></tr>
@@ -611,7 +612,8 @@
 
       // 판정 + 칩 정산 (베팅 차감과 지급을 합산해 한 번에 반영 → 올인 후 승리 시 오파산 방지)
       const r = evaluate(result, bet);
-      const net = applyFee(r.payout - bet);   // 승리 순이익 수수료
+      const rawNet = applyFee(r.payout - bet);        // 승리 순이익 수수료
+      const net = capWin(rawNet);                     // 한 판 획득 상한
 
       r.hits.forEach(i => reels[i].el.classList.add('hit'));
 
@@ -620,7 +622,7 @@
         if (r.symbol === '7️⃣') machine.classList.add('jackpot');
         highlightPayRow('t-' + r.symbol);
         const label = r.symbol === '7️⃣' ? '🎉 JACKPOT!!! 🎉' : `🎉 ${r.symbol}${r.symbol}${r.symbol} 대당첨!`;
-        showResult(label, `x${r.mult} · +${net.toLocaleString()} 칩 (수수료 5% 차감)`, 'result-win');
+        showResult(label, `x${r.mult} · +${net.toLocaleString()} 칩 (수수료 5% 차감)` + (net > 0 && net !== rawNet ? ' · 1회 상한 4,300칩 적용' : ''), 'result-win');
         playSfx('win');
       } else if (r.type === 'pair') {
         highlightPayRow('pair');
