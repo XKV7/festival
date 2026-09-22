@@ -9,6 +9,9 @@ index.html          로그인 (계정 선택 + PIN)
 lobby.html          게임 로비
 admin-7c2e9f.html   관리자 패널 (계정 생성 / 정산 / 초기화 / 모니터링) ← 링크 없음, 비밀번호 필요
 css/style.css       공용 테마
+favicon.svg         탭 아이콘 (카지노 칩). 모든 페이지에서 명시적으로 지정 —
+                    빠뜨리면 브라우저가 xkv7.github.io 최상위 파비콘을 가져가
+                    같은 계정의 다른 프로젝트 아이콘이 표시됩니다
 css/theme.css       로그인/로비/게임 화면 테마 (style.css 뒤에 로드)
 js/firebase-config.js   Firebase 초기화 + 계정/칩 공용 함수  ← 배포 전 설정값 입력 필요
 js/site-config.js   학교명·축제명·딜러·주최 동아리·배너 문구

@@ -63,7 +63,7 @@ jobs:
           python3 - <<'PY'
           import os, re, pathlib
           ver = os.environ["GITHUB_SHA"][:8]
-          pat = re.compile(r'(\s(?:src|href)=")((?:\.\./)?(?:css|js)/[A-Za-z0-9_.-]+\.(?:css|js))(")')
+          pat = re.compile(r'(\s(?:src|href)=")((?:\.\./)?(?:(?:css|js)/[A-Za-z0-9_.-]+\.(?:css|js)|favicon\.svg))(")')
           n = 0
           for f in pathlib.Path(".").rglob("*.html"):
               if ".git" in f.parts:
