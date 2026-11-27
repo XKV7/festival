@@ -21,7 +21,8 @@ const BALANCE = {
     [190, 25], [160, 30], [120, 40], [100, 50]
   ],
   fee: 0.05,             // 승리 순이익 수수료
-  maxWin: 4300           // 한 판(한 라운드·한 핸드)에 가져갈 수 있는 최대 순이익
+  maxWin: 4700,          // 한 판(한 라운드·한 핸드)에 가져갈 수 있는 최대 순이익
+  chipCeiling: 6700      // 보유 칩 천장. 아무리 모아도 이 값을 넘지 않는다
 };
 
 // 이번 라운드 계획
@@ -60,10 +61,18 @@ function applyFee(net) {
   return net > 0 ? Math.floor(net * (1 - BALANCE.fee)) : net;
 }
 
-// 한 판 획득 상한. 모든 게임이 칩에 반영하기 직전에 이 함수를 통과시킵니다.
-// 수수료를 뗀 뒤 마지막에 적용하므로, 실제로 받는 칩이 이 값을 넘지 않습니다.
-function capWin(net) {
-  return net > BALANCE.maxWin ? BALANCE.maxWin : net;
+// 획득 상한. 모든 게임이 칩에 반영하기 직전에 이 함수를 통과시킵니다.
+// 수수료를 뗀 뒤 마지막에 적용하므로, 실제로 받는 칩이 이 값들을 넘지 않습니다.
+//   1) 한 판 상한(maxWin): 높은 배율이 터져도 한 번에 이 금액까지만 받습니다.
+//   2) 보유 칩 천장(chipCeiling): 짤짤이로 오래 모아도 총 보유가 이 값을 넘지 않습니다.
+//      현재 칩(chips)을 넘겨주면 적용됩니다. 넘기지 않으면 한 판 상한만 적용됩니다.
+function capWin(net, chips) {
+  if (net <= 0) return net;
+  let v = Math.min(net, BALANCE.maxWin);
+  if (typeof chips === 'number' && isFinite(chips)) {
+    v = Math.min(v, Math.max(0, BALANCE.chipCeiling - Math.max(0, chips)));
+  }
+  return v;
 }
 
 
