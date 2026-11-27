@@ -351,6 +351,7 @@
             <li><b>매 판 끝날 때마다 실제 칩에 즉시 반영</b>됩니다. 도중에 나가도 그때까지의 결과는 그대로 남습니다.</li>
             <li>한 번의 행동에 <b>30초</b>가 주어집니다. 막대가 줄어드는 동안 고르세요.</li>
             <li><span class="warn">시간이 지나거나 상대가 나가면 자동으로 처리됩니다.</span> 낼 돈이 없으면 체크, 있으면 폴드로 넘어가고 남은 쪽이 팟을 가져갑니다.</li>
+            <li>사람끼리 하는 대결은 <b>한 판에 가져갈 수 있는 순이익이 4,000칩</b>까지입니다. 그보다 큰 팟을 이기면 4,000칩만 받습니다.</li>
             <li>한쪽 스택이 바닥나면 대결이 끝납니다. <b>나가기</b>를 누르면 언제든 중단할 수 있습니다.</li>
           </ul>
         </div>
@@ -358,6 +359,7 @@
           <h4>획득 상한</h4>
           <ul>
             <li><b>한 번의 판에서 가져갈 수 있는 순이익은 4,700칩까지입니다.</b> 높은 배율이 터져도 그만큼만 받습니다.</li>
+            <li><b>1:1 실시간 대결은 한 판 4,000칩까지입니다.</b> 사람끼리 하는 대결은 상한이 더 낮습니다.</li>
             <li><b>보유 칩 천장 6,700칩.</b> 오래 모아도 총 보유 칩이 6,700칩을 넘지 않습니다. 천장에 닿으면 그만큼만 지급됩니다.</li>
             <li>모든 게임에 공통으로 적용됩니다. 상한에 걸리면 결과 문구에 표시됩니다.</li>
           </ul>
@@ -1186,8 +1188,8 @@
       let myNet, oppNet;
       if (outcome === 'tie') { myNet = 0; oppNet = 0; }
       // 1:1 은 양쪽 테이블 스택으로 천장을 적용한다 (두 화면이 같은 값을 알고 있어 결과가 어긋나지 않음)
-      else if (iWin) { myNet = capWin(pot - rake - mePut, PVP.myStack); oppNet = -aiPut; }
-      else { myNet = -mePut; oppNet = capWin(pot - rake - aiPut, PVP.oppStack); }
+      else if (iWin) { myNet = capWinPvp(pot - rake - mePut, PVP.myStack); oppNet = -aiPut; }
+      else { myNet = -mePut; oppNet = capWinPvp(pot - rake - aiPut, PVP.oppStack); }
 
       let msg, sub, cls;
       const detail = `내 카드 ${meCard} vs ${oppName()} ${aiCard}`;
