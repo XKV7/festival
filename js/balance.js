@@ -10,14 +10,18 @@
 //   - 끄려면 enabled: false (수수료·배율 상한·한 판 상한은 유지)
 const BALANCE = {
   enabled: true,
-  target: 3100,          // 보유 칩이 이 근처를 오르내리도록 맞춘다
+  // 보유 칩이 band 범위(1,500~3,300) 안을 오르내리도록 가중치를 조절한다.
+  // 범위를 벗어나면 끌어당기는 힘이 최대가 되고, 안쪽에서는 거리에 비례해 약해진다.
+  target: 2400,          // 범위의 중간값
   deadZone: 0,           // 목표에서 멀어지는 즉시 힘이 붙는다 (넓게 두면 엣지에 밀려 내려앉음)
   maxDrawsBelow: 5,      // 목표보다 많이 모자랄 때 최대 추첨 횟수 (최선 채택)
   maxDrawsAbove: 2,      // 목표보다 많이 넘칠 때 최대 추첨 횟수 (최악 채택)
-  scaleBelow: 2300,      // 목표보다 이만큼 모자라면 끌어올리는 힘이 최대
-  scaleAbove: 3500,      // 목표보다 이만큼 넘치면 끌어내리는 힘이 최대
+  scaleBelow: 900,       // 목표보다 이만큼 모자라면(=1,500) 끌어올리는 힘이 최대
+  scaleAbove: 900,       // 목표보다 이만큼 넘치면(=3,300) 끌어내리는 힘이 최대
   // 한 번 크게 벌었던 계정은 구제를 아예 없앤다 → 내려갈 때 파산까지 갈 수 있다
-  richPeak: 4500,        // 이번 세션 최고 보유가 이 값을 넘으면 (크게 벌어본 사람)
+  richPeak: 6000,        // 이번 세션 최고 보유가 이 값을 넘으면 (크게 벌어본 사람)
+                         // 범위(최대 3,300)보다 훨씬 위에 둔다. 범위 바로 위에 두면
+                         // 슬롯처럼 출렁임이 큰 게임에서 거의 모두가 파산한다.
   richDrawsBelow: 1,     // 목표 아래에서도 구제 없음. 하우스 엣지에 그대로 노출되어 파산까지 갈 수 있다
   // [총 베팅 하한, 이 배율 이상 금지]  (베팅 100 미만은 제한 없음)
   payoutCaps: [
@@ -26,6 +30,7 @@ const BALANCE = {
   ],
   fee: 0.05,             // 승리 순이익 수수료
   maxWin: 4700,          // 한 판(한 라운드·한 핸드)에 가져갈 수 있는 최대 순이익
+  pvpMaxWin: 4000,       // 1:1 실시간 대결은 더 낮은 상한을 쓴다
   chipCeiling: 6700      // 보유 칩 천장 (우대 모드에서는 적용하지 않는다)
 };
 
@@ -96,6 +101,18 @@ function capWin(net, chips) {
   let v = Math.min(net, BALANCE.maxWin);
   if (!BOOST.on && typeof chips === 'number' && isFinite(chips)) {
     v = Math.min(v, Math.max(0, BALANCE.chipCeiling - Math.max(0, chips)));
+  }
+  return v;
+}
+
+// 1:1 실시간 대결 전용 상한 (사람 대 사람).
+// 두 클라이언트가 반드시 같은 값을 계산해야 결과가 어긋나지 않으므로,
+// 한쪽에만 켜져 있을 수 있는 우대 여부는 보지 않는다. 스택은 양쪽이 모두 아는 값이다.
+function capWinPvp(net, stack) {
+  if (net <= 0) return net;
+  let v = Math.min(net, BALANCE.pvpMaxWin);
+  if (typeof stack === 'number' && isFinite(stack)) {
+    v = Math.min(v, Math.max(0, BALANCE.chipCeiling - Math.max(0, stack)));
   }
   return v;
 }
