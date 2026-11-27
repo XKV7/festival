@@ -360,7 +360,7 @@
           <ul>
             <li><b>한 번의 판에서 가져갈 수 있는 순이익은 4,700칩까지입니다.</b> 높은 배율이 터져도 그만큼만 받습니다.</li>
             <li><b>1:1 실시간 대결은 한 판 3,400칩까지입니다.</b> 사람끼리 하는 대결은 상한이 더 낮습니다.</li>
-            <li><b>보유 칩 천장.</b> 오래 모아도 총 보유 칩은 <b>최대 6,700칩</b>까지입니다. 천장에 닿으면 남은 만큼만 지급됩니다.</li>
+            <li><b>보유 칩 천장.</b> 오래 모아도 총 보유 칩은 <b>최대 6,700칩</b>까지입니다. 상한에 가까워지면 그보다 크게 버는 판은 나오지 않습니다.</li>
             <li>모든 게임에 공통으로 적용됩니다. 상한에 걸리면 결과 문구에 표시됩니다.</li>
           </ul>
         </div>
@@ -635,20 +635,28 @@
       return Object.keys(dist).pop();
     }
 
+    // 보유 칩 상한에 닿아 있으면 AI 는 포기하지 않는다. 포기로 이겨도 팟이 칩에
+    // 반영되지 않아(천장) 이상하게 보이므로, 쇼다운까지 가서 카드로 갈리게 한다.
+    function aiMustPlay() {
+      return !PVP.on && ceilingRoom(currentChips) <= 0;
+    }
     // 선일 때: 베팅 or 다이
     function aiFirstAction(p) {
+      if (aiMustPlay()) return 'bet';
       const bet = Math.min(1, EQ_FIRST[p].bet + (p >= 7 ? foldExploit() : 0));
       return chance(bet) ? 'bet' : 'die';
     }
     // 후일 때 (플레이어가 베팅함): call / raise / fold
     function aiSecondAction(p) {
       const d = { ...EQ_SECOND[p] };
+      if (aiMustPlay()) { d.call += d.fold; d.fold = 0; }
       const x = p >= 7 ? foldExploit() : 0;       // 잘 접는 상대에겐 높은 카드 앞에서도 가끔 레이즈 블러프
       if (x > 0) { const m = Math.min(d.fold, x); d.fold -= m; d.raise += m; }
       return pick(d);
     }
     // 선인데 플레이어가 레이즈함: call / fold
     function aiFacingRaise(p) {
+      if (aiMustPlay()) return 'call';
       return chance(EQ_VS_RAISE[p].call) ? 'call' : 'fold';
     }
 
