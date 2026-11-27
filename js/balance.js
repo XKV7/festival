@@ -1,20 +1,24 @@
 // ============ 하우스 조절기 ============
 // 1) 목표 칩 끌어당김: 보유 칩이 target 보다 적으면 결과를 여러 번 뽑아 "가장 좋은 것"을,
 //    많으면 "가장 나쁜 것"을 채택한다. 적을수록·많을수록 뽑는 횟수가 늘어 끌어당기는 힘이 세진다.
-//    목표 근처(deadZone 안)에서는 1회만 뽑아 자연 확률로 둔다.
 //    → 초반에는 잘 풀려서 재미가 붙고, 많이 따면 서서히 되돌아와 target 근처를 오르내린다.
-// 2) 배율 상한: 총 베팅액 구간별로 "총 지급 ÷ 총 베팅"이 상한 이상인 결과는 절대 나오지 않는다.
-// 3) 한 판 상한: 한 라운드에 가져가는 순이익은 maxWin 을 넘지 않는다.
-// 4) 수수료: 승리 시 순이익에서 fee 비율을 뗀다 (인디언포커·홀덤은 자체 레이크가 있어 제외).
+// 2) 한 번 크게 벌었던 사람은 구제를 줄인다(richPeak). 처음 온 학생은 쉽게 파산하지 않지만,
+//    크게 땄다가 잃기 시작하면 끝까지 잃을 수 있다.
+// 3) 배율 상한: 총 베팅액 구간별로 "총 지급 ÷ 총 베팅"이 상한 이상인 결과는 절대 나오지 않는다.
+// 4) 한 판 상한(maxWin)과 보유 칩 천장(chipCeiling).
+// 5) 수수료: 승리 시 순이익에서 fee 비율을 뗀다 (인디언포커·홀덤은 자체 레이크가 있어 제외).
 //   - 끄려면 enabled: false (수수료·배율 상한·한 판 상한은 유지)
 const BALANCE = {
   enabled: true,
   target: 3100,          // 보유 칩이 이 근처를 오르내리도록 맞춘다
   deadZone: 0,           // 목표에서 멀어지는 즉시 힘이 붙는다 (넓게 두면 엣지에 밀려 내려앉음)
-  maxDrawsBelow: 7,      // 목표보다 많이 모자랄 때 최대 추첨 횟수 (최선 채택)
-  maxDrawsAbove: 4,      // 목표보다 많이 넘칠 때 최대 추첨 횟수 (최악 채택)
-  scaleBelow: 1600,      // 목표보다 이만큼 모자라면 끌어올리는 힘이 최대
-  scaleAbove: 2200,      // 목표보다 이만큼 넘치면 끌어내리는 힘이 최대
+  maxDrawsBelow: 5,      // 목표보다 많이 모자랄 때 최대 추첨 횟수 (최선 채택)
+  maxDrawsAbove: 2,      // 목표보다 많이 넘칠 때 최대 추첨 횟수 (최악 채택)
+  scaleBelow: 2300,      // 목표보다 이만큼 모자라면 끌어올리는 힘이 최대
+  scaleAbove: 3500,      // 목표보다 이만큼 넘치면 끌어내리는 힘이 최대
+  // 한 번 크게 벌었던 계정은 구제를 아예 없앤다 → 내려갈 때 파산까지 갈 수 있다
+  richPeak: 4500,        // 이번 세션 최고 보유가 이 값을 넘으면 (크게 벌어본 사람)
+  richDrawsBelow: 1,     // 목표 아래에서도 구제 없음. 하우스 엣지에 그대로 노출되어 파산까지 갈 수 있다
   // [총 베팅 하한, 이 배율 이상 금지]  (베팅 100 미만은 제한 없음)
   payoutCaps: [
     [500, 9], [470, 10], [400, 12], [320, 15], [230, 20],
@@ -22,24 +26,44 @@ const BALANCE = {
   ],
   fee: 0.05,             // 승리 순이익 수수료
   maxWin: 4700,          // 한 판(한 라운드·한 핸드)에 가져갈 수 있는 최대 순이익
-  chipCeiling: 6700      // 보유 칩 천장. 아무리 모아도 이 값을 넘지 않는다
+  chipCeiling: 6700      // 보유 칩 천장 (우대 모드에서는 적용하지 않는다)
 };
+
+// 이번 로그인 세션의 최고 보유 칩. 게임 페이지를 옮겨 다녀도 이어진다.
+const PEAK_KEY = 'chipPeak';
+function balancePeak() {
+  try { return Number(sessionStorage.getItem(PEAK_KEY)) || 0; } catch (e) { return 0; }
+}
+function balanceNotePeak(chips) {
+  const c = Math.max(0, chips || 0);
+  if (c <= balancePeak()) return;
+  try { sessionStorage.setItem(PEAK_KEY, String(c)); } catch (e) {}
+}
 
 // 이번 라운드 계획
 //   { mode: 'best',  k }  → k번 뽑아 가장 유리한 결과 채택 (칩이 목표보다 적을 때)
 //   { mode: 'worst', k }  → k번 뽑아 가장 불리한 결과 채택 (칩이 목표보다 많을 때)
 //   k = 1 이면 자연 확률 그대로
 function balancePlan(chips) {
-  if (BOOST.on) return { mode: 'best', k: BOOST.k };
-  if (!BALANCE.enabled) return { mode: 'best', k: 1 };
-
   const c = Math.max(0, chips || 0);
+  balanceNotePeak(c);
   const gap = c - BALANCE.target;
+
+  if (BOOST.on && gap < 0) {
+    // 우대: 목표에서 멀수록 강하게 밀어 올리되, 목표에 가까워지면 자연 확률로 수렴한다.
+    // 목표 바로 아래에서 한 방에 최고 보상까지 뛰어넘지 못하게 하기 위함이다.
+    // 목표 위에서는 아래 일반 규칙(끌어내림)을 그대로 따른다. 천장(capWin)만 없다.
+    const sb = Math.min(1, -gap / BALANCE.scaleBelow);
+    return { mode: 'best', k: 1 + Math.round(sb * (BOOST.k - 1)) };
+  }
+  if (!BALANCE.enabled) return { mode: 'best', k: 1 };
   if (Math.abs(gap) <= BALANCE.deadZone) return { mode: 'best', k: 1 };
 
   if (gap < 0) {
+    // 크게 벌었던 적이 있으면 구제가 약해진다
+    const maxBelow = balancePeak() >= BALANCE.richPeak ? BALANCE.richDrawsBelow : BALANCE.maxDrawsBelow;
     const s = Math.min(1, (-gap - BALANCE.deadZone) / BALANCE.scaleBelow);
-    return { mode: 'best', k: 1 + Math.round(s * (BALANCE.maxDrawsBelow - 1)) };
+    return { mode: 'best', k: 1 + Math.round(s * (maxBelow - 1)) };
   }
   const s = Math.min(1, (gap - BALANCE.deadZone) / BALANCE.scaleAbove);
   return { mode: 'worst', k: 1 + Math.round(s * (BALANCE.maxDrawsAbove - 1)) };
@@ -63,13 +87,14 @@ function applyFee(net) {
 
 // 획득 상한. 모든 게임이 칩에 반영하기 직전에 이 함수를 통과시킵니다.
 // 수수료를 뗀 뒤 마지막에 적용하므로, 실제로 받는 칩이 이 값들을 넘지 않습니다.
-//   1) 한 판 상한(maxWin): 높은 배율이 터져도 한 번에 이 금액까지만 받습니다.
+//   1) 한 판 상한(maxWin): 높은 배율이 터져도 한 번에 이 금액까지만 받습니다. 우대 중에도 적용됩니다.
 //   2) 보유 칩 천장(chipCeiling): 짤짤이로 오래 모아도 총 보유가 이 값을 넘지 않습니다.
 //      현재 칩(chips)을 넘겨주면 적용됩니다. 넘기지 않으면 한 판 상한만 적용됩니다.
+//      우대 중에는 천장을 적용하지 않아 최고 보상까지 올라갈 수 있습니다.
 function capWin(net, chips) {
   if (net <= 0) return net;
   let v = Math.min(net, BALANCE.maxWin);
-  if (typeof chips === 'number' && isFinite(chips)) {
+  if (!BOOST.on && typeof chips === 'number' && isFinite(chips)) {
     v = Math.min(v, Math.max(0, BALANCE.chipCeiling - Math.max(0, chips)));
   }
   return v;
