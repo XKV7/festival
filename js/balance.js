@@ -119,6 +119,38 @@ function capWinPvp(net, stack) {
 }
 
 
+// ============ 1:1 실시간 대결 균형 조절 ============
+// 사람 대 사람 대결은 제로섬이라 목표 칩 끌어당김(balancePlan)을 쓸 수 없다.
+// 대신 "이미 칩이 많은 쪽에게 불리하게" 카드를 배분해 두 사람이 3,000 근처에서
+// 주고받게 만든다. 호스트(A석)만 카드를 만들고 두 화면이 그 카드를 그대로 쓰므로
+// 결과가 어긋날 일은 없다.
+//   - 칩 차이가 클수록 적게 가진 쪽을 더 세게 밀어준다.
+//   - 앞선 쪽이 3,000을 넘었으면 차이가 작아도 밀어준다 (3,000이 균형점).
+//   - 차이가 없으면(=완전히 같으면) 아무 쪽도 밀지 않는다.
+const PVP_BALANCE = {
+  enabled: true,
+  target: 3000,   // 균형점. 앞선 쪽이 이 값을 넘으면 차이가 작아도 조절이 걸린다
+  scale: 1500,    // 이만큼 벌어지면 조절이 최대
+  maxDraws: 3     // 최대 추첨 횟수 (적게 가진 쪽에게 가장 유리한 결과 채택)
+};
+
+// 반환: { fav: 'me' | 'opp' | null, k }  — fav 가 null 이면 자연 확률
+function pvpBalancePlan(myStack, oppStack) {
+  const none = { fav: null, k: 1 };
+  if (!PVP_BALANCE.enabled) return none;
+  const mine = Math.max(0, myStack || 0), opp = Math.max(0, oppStack || 0);
+  const gap = mine - opp;
+  if (gap === 0) return none;
+  const lead = Math.max(mine, opp);
+  let s = Math.min(1, Math.abs(gap) / PVP_BALANCE.scale);
+  if (lead >= PVP_BALANCE.target) {
+    s = Math.max(s, Math.min(1, (lead - PVP_BALANCE.target) / PVP_BALANCE.scale));
+  }
+  const k = 1 + Math.round(s * (PVP_BALANCE.maxDraws - 1));
+  if (k <= 1) return none;
+  return { fav: gap > 0 ? 'opp' : 'me', k };
+}
+
 // drawFn(): 결과 하나를 무작위로 만든다. netFn(result): 그 결과의 순손익(또는 유불리 점수).
 // opts.bet: 총 베팅액 (주면 netFn을 순손익으로 보고 배율 상한을 적용)
 // opts.plan: 미리 뽑아둔 balancePlan (같은 라운드에서 두 번 판단하지 않도록)
