@@ -28,6 +28,9 @@ const BALANCE = {
     [500, 9], [470, 10], [400, 12], [320, 15], [230, 20],
     [190, 25], [160, 30], [120, 40], [100, 50]
   ],
+  // 조임 구간: 보유 칩이 이 값 이상이면 모든 게임의 이길 확률을 아래 값으로 고정한다
+  squeezeFrom: 4000,     // 0 이면 끔
+  squeezeWinRate: 0.10,  // 조임 구간에서의 승률
   fee: 0.05,             // 승리 순이익 수수료
   maxWin: 4700,          // 한 판(한 라운드·한 핸드)에 가져갈 수 있는 최대 순이익
   pvpMaxWin: 3000,       // 1:1 실시간 대결은 더 낮은 상한을 쓴다. 한 판으로 승부가
@@ -63,6 +66,16 @@ function balancePlan(chips) {
     return { mode: 'best', k: 1 + Math.round(sb * (BOOST.k - 1)) };
   }
   if (!BALANCE.enabled) return { mode: 'best', k: 1 };
+
+  // 조임 구간: 보유 칩이 squeezeFrom 이상이면 게임 본래 확률을 무시하고
+  // 이길 확률을 squeezeWinRate 로 고정한다. 승·패는 이 판 시작할 때 한 번 정하고
+  // (plan.win), 그 방향에 맞는 결과가 나올 때까지 뽑는다. 게임마다 본래 승률이
+  // 달라도 결과 승률은 같아진다. 블랙잭처럼 한 판에 두 번 뽑는 게임도 같은
+  // plan 을 쓰므로 방향이 엇갈리지 않는다. 우대 중에는 적용하지 않는다.
+  if (!BOOST.on && BALANCE.squeezeFrom > 0 && c >= BALANCE.squeezeFrom) {
+    return { mode: 'rate', k: 1, win: Math.random() < BALANCE.squeezeWinRate };
+  }
+
   if (Math.abs(gap) <= BALANCE.deadZone) return { mode: 'best', k: 1 };
 
   if (gap < 0) {
@@ -157,13 +170,26 @@ function pvpBalancePlan(myStack, oppStack) {
 // 반환: 채택된 결과
 function steerOutcome(chips, drawFn, netFn, opts) {
   opts = opts || {};
-  const { mode, k } = opts.plan || balancePlan(chips);
+  const plan = opts.plan || balancePlan(chips);
+  const { mode, k } = plan;
   const bet = opts.bet || 0;
   const draw = () => {
     let r = drawFn();
     if (bet > 0) for (let i = 0; i < 300 && !capOK(bet, netFn(r) + bet); i++) r = drawFn();
     return r;
   };
+  // 승률 고정 모드: 이 판이 승리인지 패배인지는 plan 에 이미 정해져 있다.
+  // 그 방향의 결과가 나올 때까지 뽑는다 (못 찾으면 첫 결과를 그대로 쓴다).
+  if (mode === 'rate') {
+    const wantWin = !!plan.win;
+    let first = null;
+    for (let i = 0; i < 200; i++) {
+      const r = draw();
+      if (first === null) first = r;
+      if (wantWin ? netFn(r) > 0 : netFn(r) <= 0) return r;
+    }
+    return first;
+  }
   let chosen = null, chosenNet = 0;
   for (let i = 0; i < k; i++) {
     const r = draw();
