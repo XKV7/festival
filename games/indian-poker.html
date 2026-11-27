@@ -1079,10 +1079,31 @@
       // 호스트가 카드와 선/후를 배분, 게스트는 받아감
       let hand;
       if (MP.isHost) {
-        const deck = [];
-        for (let n = 1; n <= 10; n++) for (let k = 0; k < 4; k++) deck.push(n);
-        const pick = () => deck.splice(Math.floor(Math.random() * deck.length), 1)[0];
-        hand = { first: PVP.no % 2 === 1 ? 'A' : 'B', cards: { A: pick(), B: pick() }, unit };
+        const dealPair = () => {
+          const deck = [];
+          for (let n = 1; n <= 10; n++) for (let k = 0; k < 4; k++) deck.push(n);
+          const pick = () => deck.splice(Math.floor(Math.random() * deck.length), 1)[0];
+          return { A: pick(), B: pick() };
+        };
+        // 1) 한쪽만 운영 우대 대상이면 그쪽, 2) 아니면 칩이 적은 쪽에게 유리한 카드를 고른다
+        let favSeat = boostActive() && !MP.oppBoost ? MP.mySeat
+                    : MP.oppBoost && !boostActive() ? MP.oppSeat : null;
+        let draws = BOOST.k;
+        if (!favSeat) {
+          const plan = pvpBalancePlan(PVP.myStack, PVP.oppStack);
+          if (plan.fav) { favSeat = plan.fav === 'me' ? MP.mySeat : MP.oppSeat; draws = plan.k; }
+        }
+        let cards = dealPair();
+        if (favSeat) {
+          const foeSeat = favSeat === 'A' ? 'B' : 'A';
+          let bestScore = cards[favSeat] - cards[foeSeat];
+          for (let i = 1; i < Math.max(1, draws); i++) {
+            const c = dealPair();
+            const score = c[favSeat] - c[foeSeat];
+            if (score > bestScore) { bestScore = score; cards = c; }
+          }
+        }
+        hand = { first: PVP.no % 2 === 1 ? 'A' : 'B', cards, unit };
         await mpPublishHand(PVP.no, hand);
       } else {
         pvpBar('카드 배분 중', '');

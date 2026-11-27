@@ -1066,9 +1066,11 @@
     // 우대 중일 때 쓰는 플롭 고르기.
     // 남은 카드에서 3장짜리 후보를 BOOST.k 개 뽑아, 우대 대상의 패가 상대보다 가장 앞서는 조합을 고른다.
     // 홀카드와 턴·리버는 손대지 않는다.
-    function pickBoostFlop(pool, favHole, foeHole) {
+    // draws: 후보 플롭을 몇 번 뽑을지. 생략하면 운영 우대 세기(BOOST.k)
+    function pickBoostFlop(pool, favHole, foeHole, draws) {
+      const tries = Math.max(1, draws || BOOST.k);
       let best = null, bestScore = -Infinity;
-      for (let i = 0; i < BOOST.k; i++) {
+      for (let i = 0; i < tries; i++) {
         const rest = pool.slice();
         const flop = [];
         for (let k = 0; k < 3; k++) flop.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]);
@@ -1356,11 +1358,17 @@
             const d = freshDeck();
             const cards = { A: [d.pop(), d.pop()], B: [d.pop(), d.pop()] };
             let flop;
-            // 한쪽만 우대 대상이면 그쪽에 유리한 플롭을 고른다. 양쪽 다이거나 아무도 아니면 자연 확률.
-            const favSeat = boostActive() && !MP.oppBoost ? MP.mySeat
-                          : MP.oppBoost && !boostActive() ? MP.oppSeat : null;
+            // 1) 한쪽만 운영 우대 대상이면 그쪽에 유리한 플롭을 고른다 (양쪽 다이거나 아무도 아니면 넘어감)
+            // 2) 아니면 칩이 적은 쪽에게 유리한 플롭을 고른다 → 3,000 근처에서 주고받게 된다
+            let favSeat = boostActive() && !MP.oppBoost ? MP.mySeat
+                        : MP.oppBoost && !boostActive() ? MP.oppSeat : null;
+            let draws = BOOST.k;
+            if (!favSeat) {
+              const plan = pvpBalancePlan(PVP.myStack, PVP.oppStack);
+              if (plan.fav) { favSeat = plan.fav === 'me' ? MP.mySeat : MP.oppSeat; draws = plan.k; }
+            }
             if (favSeat) {
-              flop = pickBoostFlop(d, cards[favSeat], cards[favSeat === 'A' ? 'B' : 'A']);
+              flop = pickBoostFlop(d, cards[favSeat], cards[favSeat === 'A' ? 'B' : 'A'], draws);
               flop.forEach(c => { const i = d.findIndex(x => sameCard(x, c)); if (i >= 0) d.splice(i, 1); });
             } else {
               flop = [d.pop(), d.pop(), d.pop()];

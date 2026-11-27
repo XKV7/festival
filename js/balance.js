@@ -10,17 +10,17 @@
 //   - 끄려면 enabled: false (수수료·배율 상한·한 판 상한은 유지)
 const BALANCE = {
   enabled: true,
-  // 보유 칩이 band 범위(1,500~3,300) 안을 오르내리도록 가중치를 조절한다.
+  // 보유 칩이 band 범위(1,500~3,900) 안을 오르내리도록 가중치를 조절한다.
   // 범위를 벗어나면 끌어당기는 힘이 최대가 되고, 안쪽에서는 거리에 비례해 약해진다.
-  target: 2400,          // 범위의 중간값
+  target: 2700,          // 범위의 중간값
   deadZone: 0,           // 목표에서 멀어지는 즉시 힘이 붙는다 (넓게 두면 엣지에 밀려 내려앉음)
   maxDrawsBelow: 5,      // 목표보다 많이 모자랄 때 최대 추첨 횟수 (최선 채택)
   maxDrawsAbove: 2,      // 목표보다 많이 넘칠 때 최대 추첨 횟수 (최악 채택)
-  scaleBelow: 900,       // 목표보다 이만큼 모자라면(=1,500) 끌어올리는 힘이 최대
-  scaleAbove: 900,       // 목표보다 이만큼 넘치면(=3,300) 끌어내리는 힘이 최대
+  scaleBelow: 1200,      // 목표보다 이만큼 모자라면(=1,500) 끌어올리는 힘이 최대
+  scaleAbove: 1200,      // 목표보다 이만큼 넘치면(=3,900) 끌어내리는 힘이 최대
   // 한 번 크게 벌었던 계정은 구제를 아예 없앤다 → 내려갈 때 파산까지 갈 수 있다
-  richPeak: 6000,        // 이번 세션 최고 보유가 이 값을 넘으면 (크게 벌어본 사람)
-                         // 범위(최대 3,300)보다 훨씬 위에 둔다. 범위 바로 위에 두면
+  richPeak: 6300,        // 이번 세션 최고 보유가 이 값을 넘으면 (크게 벌어본 사람)
+                         // 범위(최대 3,900)보다 훨씬 위에 둔다. 범위 바로 위에 두면
                          // 슬롯처럼 출렁임이 큰 게임에서 거의 모두가 파산한다.
   richDrawsBelow: 1,     // 목표 아래에서도 구제 없음. 하우스 엣지에 그대로 노출되어 파산까지 갈 수 있다
   // [총 베팅 하한, 이 배율 이상 금지]  (베팅 100 미만은 제한 없음)
@@ -28,6 +28,9 @@ const BALANCE = {
     [500, 9], [470, 10], [400, 12], [320, 15], [230, 20],
     [190, 25], [160, 30], [120, 40], [100, 50]
   ],
+  // 조임 구간: 보유 칩이 이 값 이상이면 모든 게임의 이길 확률을 아래 값으로 고정한다
+  squeezeFrom: 4000,     // 0 이면 끔
+  squeezeWinRate: 0.10,  // 조임 구간에서의 승률
   fee: 0.05,             // 승리 순이익 수수료
   maxWin: 4700,          // 한 판(한 라운드·한 핸드)에 가져갈 수 있는 최대 순이익
   pvpMaxWin: 3000,       // 1:1 실시간 대결은 더 낮은 상한을 쓴다. 한 판으로 승부가
@@ -63,6 +66,16 @@ function balancePlan(chips) {
     return { mode: 'best', k: 1 + Math.round(sb * (BOOST.k - 1)) };
   }
   if (!BALANCE.enabled) return { mode: 'best', k: 1 };
+
+  // 조임 구간: 보유 칩이 squeezeFrom 이상이면 게임 본래 확률을 무시하고
+  // 이길 확률을 squeezeWinRate 로 고정한다. 승·패는 이 판 시작할 때 한 번 정하고
+  // (plan.win), 그 방향에 맞는 결과가 나올 때까지 뽑는다. 게임마다 본래 승률이
+  // 달라도 결과 승률은 같아진다. 블랙잭처럼 한 판에 두 번 뽑는 게임도 같은
+  // plan 을 쓰므로 방향이 엇갈리지 않는다. 우대 중에는 적용하지 않는다.
+  if (!BOOST.on && BALANCE.squeezeFrom > 0 && c >= BALANCE.squeezeFrom) {
+    return { mode: 'rate', k: 1, win: Math.random() < BALANCE.squeezeWinRate };
+  }
+
   if (Math.abs(gap) <= BALANCE.deadZone) return { mode: 'best', k: 1 };
 
   if (gap < 0) {
@@ -119,19 +132,64 @@ function capWinPvp(net, stack) {
 }
 
 
+// ============ 1:1 실시간 대결 균형 조절 ============
+// 사람 대 사람 대결은 제로섬이라 목표 칩 끌어당김(balancePlan)을 쓸 수 없다.
+// 대신 "이미 칩이 많은 쪽에게 불리하게" 카드를 배분해 두 사람이 3,000 근처에서
+// 주고받게 만든다. 호스트(A석)만 카드를 만들고 두 화면이 그 카드를 그대로 쓰므로
+// 결과가 어긋날 일은 없다.
+//   - 칩 차이가 클수록 적게 가진 쪽을 더 세게 밀어준다.
+//   - 앞선 쪽이 3,000을 넘었으면 차이가 작아도 밀어준다 (3,000이 균형점).
+//   - 차이가 없으면(=완전히 같으면) 아무 쪽도 밀지 않는다.
+const PVP_BALANCE = {
+  enabled: true,
+  target: 3000,   // 균형점. 앞선 쪽이 이 값을 넘으면 차이가 작아도 조절이 걸린다
+  scale: 1500,    // 이만큼 벌어지면 조절이 최대
+  maxDraws: 3     // 최대 추첨 횟수 (적게 가진 쪽에게 가장 유리한 결과 채택)
+};
+
+// 반환: { fav: 'me' | 'opp' | null, k }  — fav 가 null 이면 자연 확률
+function pvpBalancePlan(myStack, oppStack) {
+  const none = { fav: null, k: 1 };
+  if (!PVP_BALANCE.enabled) return none;
+  const mine = Math.max(0, myStack || 0), opp = Math.max(0, oppStack || 0);
+  const gap = mine - opp;
+  if (gap === 0) return none;
+  const lead = Math.max(mine, opp);
+  let s = Math.min(1, Math.abs(gap) / PVP_BALANCE.scale);
+  if (lead >= PVP_BALANCE.target) {
+    s = Math.max(s, Math.min(1, (lead - PVP_BALANCE.target) / PVP_BALANCE.scale));
+  }
+  const k = 1 + Math.round(s * (PVP_BALANCE.maxDraws - 1));
+  if (k <= 1) return none;
+  return { fav: gap > 0 ? 'opp' : 'me', k };
+}
+
 // drawFn(): 결과 하나를 무작위로 만든다. netFn(result): 그 결과의 순손익(또는 유불리 점수).
 // opts.bet: 총 베팅액 (주면 netFn을 순손익으로 보고 배율 상한을 적용)
 // opts.plan: 미리 뽑아둔 balancePlan (같은 라운드에서 두 번 판단하지 않도록)
 // 반환: 채택된 결과
 function steerOutcome(chips, drawFn, netFn, opts) {
   opts = opts || {};
-  const { mode, k } = opts.plan || balancePlan(chips);
+  const plan = opts.plan || balancePlan(chips);
+  const { mode, k } = plan;
   const bet = opts.bet || 0;
   const draw = () => {
     let r = drawFn();
     if (bet > 0) for (let i = 0; i < 300 && !capOK(bet, netFn(r) + bet); i++) r = drawFn();
     return r;
   };
+  // 승률 고정 모드: 이 판이 승리인지 패배인지는 plan 에 이미 정해져 있다.
+  // 그 방향의 결과가 나올 때까지 뽑는다 (못 찾으면 첫 결과를 그대로 쓴다).
+  if (mode === 'rate') {
+    const wantWin = !!plan.win;
+    let first = null;
+    for (let i = 0; i < 200; i++) {
+      const r = draw();
+      if (first === null) first = r;
+      if (wantWin ? netFn(r) > 0 : netFn(r) <= 0) return r;
+    }
+    return first;
+  }
   let chosen = null, chosenNet = 0;
   for (let i = 0; i < k; i++) {
     const r = draw();
