@@ -74,6 +74,10 @@ function balancePlan(chips) {
   }
   if (!BALANCE.enabled) return { mode: 'best', k: 1 };
 
+  // 천장에 닿았으면 아예 이길 수 없게 한다. 이겨 놓고 칩이 들어오지 않으면
+  // (capWin 이 0으로 깎으면) 바로 눈에 띄기 때문이다. 우대 중에는 천장이 없다.
+  if (!BOOST.on && ceilingRoom(c) <= 0) return { mode: 'rate', k: 1, win: false };
+
   // 조임 구간: 보유 칩이 squeezeFrom 이상이면 게임 본래 확률을 무시하고
   // 이길 확률을 squeezeWinRate 로 고정한다. 승·패는 이 판 시작할 때 한 번 정하고
   // (plan.win), 그 방향에 맞는 결과가 나올 때까지 뽑는다. 게임마다 본래 승률이
@@ -138,6 +142,18 @@ function chipCeilingForPid(pid) {
   h ^= h >>> 13;
   const steps = Math.max(0, Math.floor((BALANCE.chipCeiling - BALANCE.chipCeilingMin) / 10));
   return BALANCE.chipCeilingMin + (Math.abs(h) % (steps + 1)) * 10;
+}
+
+// 천장까지 남은 칩. 우대 중에는 천장을 적용하지 않으므로 무한.
+function ceilingRoom(chips) {
+  if (BOOST.on) return Infinity;
+  return Math.max(0, chipCeilingFor() - Math.max(0, chips || 0));
+}
+
+// 이 계획이 결과에 영향을 주는가. 게임들이 "자연 확률이면 건너뛰기"를 판단할 때 쓴다.
+// 조임 구간·천장 계획은 k 가 1 이어도 승패 방향을 정하므로 반드시 적용해야 한다.
+function planActive(plan) {
+  return !!plan && (plan.k > 1 || plan.mode === 'rate');
 }
 
 let _myCeiling = null;
@@ -209,14 +225,43 @@ function pvpBalancePlan(myStack, oppStack) {
 // opts.bet: 총 베팅액 (주면 netFn을 순손익으로 보고 배율 상한을 적용)
 // opts.plan: 미리 뽑아둔 balancePlan (같은 라운드에서 두 번 판단하지 않도록)
 // 반환: 채택된 결과
+// opts.bet     : 총 베팅액. netFn 이 실제 순손익일 때 준다 (배율 상한·천장 판정에 사용)
+// opts.unit     : netFn 이 베팅액 배수(±1 등)일 때의 1단위 금액 (블랙잭)
+// opts.winNet   : 이 라운드를 이겼을 때 들어올 순이익을 미리 아는 경우 (하이로우 연승)
 function steerOutcome(chips, drawFn, netFn, opts) {
   opts = opts || {};
   const plan = opts.plan || balancePlan(chips);
   const { mode, k } = plan;
   const bet = opts.bet || 0;
+  const room = ceilingRoom(chips);
+
+  // 천장까지 남은 칩보다 많이 버는 결과는 뽑지 않는다.
+  // 이기고도 칩이 그만큼 들어오지 않으면 학생 눈에 바로 보이기 때문이다.
+  // 금액을 알 수 없는 게임(단위 점수)은 천장에 닿았는지만 본다.
+  const payable = (n) => {
+    if (n <= 0) return true;
+    if (room <= 0) return false;
+    if (room === Infinity) return true;
+    let amount = 0;
+    if (opts.winNet > 0) amount = applyFee(opts.winNet);
+    else if (bet > 0) amount = applyFee(n);
+    else if (opts.unit > 0) amount = applyFee(Math.floor(n * opts.unit));
+    else return true;
+    return amount <= room;
+  };
+
   const draw = () => {
     let r = drawFn();
-    if (bet > 0) for (let i = 0; i < 300 && !capOK(bet, netFn(r) + bet); i++) r = drawFn();
+    for (let i = 0; i < 200; i++) {
+      const n = netFn(r);
+      if (capOK(bet, n + bet) && payable(n)) return r;
+      r = drawFn();
+    }
+    // 지급할 수 없는 승리만 계속 나오면, 확실히 지는 결과를 찾아 준다
+    for (let i = 0; i < 200; i++) {
+      const x = drawFn();
+      if (netFn(x) <= 0) return x;
+    }
     return r;
   };
   // 승률 고정 모드: 이 판이 승리인지 패배인지는 plan 에 이미 정해져 있다.
