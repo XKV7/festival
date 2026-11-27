@@ -39,7 +39,10 @@ const BALANCE = {
   maxWin: 4700,          // 한 판(한 라운드·한 핸드)에 가져갈 수 있는 최대 순이익
   pvpMaxWin: 3400,       // 1:1 실시간 대결은 더 낮은 상한을 쓴다. 한 판으로 승부가
                          // 끝나지 않아 번갈아 주고받으며 균형이 유지되는 값.
-  chipCeiling: 6700      // 보유 칩 천장 (우대 모드에서는 적용하지 않는다)
+  // 보유 칩 천장. 계정마다 조금씩 다른 값을 쓴다 (모두 같으면 눈치채기 쉬움).
+  // 아이디를 해시해서 정하므로 같은 계정은 언제·어느 게임에서나 같은 천장이다.
+  chipCeilingMin: 6100,  // 천장의 하한
+  chipCeiling: 6700      // 천장의 상한 (우대 모드에서는 천장을 적용하지 않는다)
 };
 
 // 이번 로그인 세션의 최고 보유 칩. 게임 페이지를 옮겨 다녀도 이어진다.
@@ -118,11 +121,39 @@ function applyFee(net) {
 //   2) 보유 칩 천장(chipCeiling): 짤짤이로 오래 모아도 총 보유가 이 값을 넘지 않습니다.
 //      현재 칩(chips)을 넘겨주면 적용됩니다. 넘기지 않으면 한 판 상한만 적용됩니다.
 //      우대 중에는 천장을 적용하지 않아 최고 보상까지 올라갈 수 있습니다.
+// 계정별 보유 칩 천장. chipCeilingMin ~ chipCeiling 사이에서 아이디로 정해지며
+// 10칩 단위로 떨어진다. 같은 계정은 항상 같은 값이고, 새로 고쳐도 바뀌지 않는다.
+// 아이디를 모르면(로그인 전) 상한을 그대로 쓴다.
+function chipCeilingForPid(pid) {
+  if (!pid) return BALANCE.chipCeiling;
+  let h = 2166136261;
+  for (let i = 0; i < pid.length; i++) {
+    h ^= pid.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  // 섞기(avalanche). 이 과정이 없으면 PLAYER-001 / 002 / 003 처럼 한 글자만
+  // 다른 아이디의 천장이 일정한 간격으로 늘어서서 눈에 띈다.
+  h ^= h >>> 13; h = Math.imul(h, 1540483477);
+  h ^= h >>> 15; h = Math.imul(h, 2246822519);
+  h ^= h >>> 13;
+  const steps = Math.max(0, Math.floor((BALANCE.chipCeiling - BALANCE.chipCeilingMin) / 10));
+  return BALANCE.chipCeilingMin + (Math.abs(h) % (steps + 1)) * 10;
+}
+
+let _myCeiling = null;
+function chipCeilingFor() {
+  if (_myCeiling !== null) return _myCeiling;
+  const pid = typeof getCurrentPlayer === 'function' ? getCurrentPlayer() : null;
+  if (!pid) return BALANCE.chipCeiling;
+  _myCeiling = chipCeilingForPid(pid);
+  return _myCeiling;
+}
+
 function capWin(net, chips) {
   if (net <= 0) return net;
   let v = Math.min(net, BALANCE.maxWin);
   if (!BOOST.on && typeof chips === 'number' && isFinite(chips)) {
-    v = Math.min(v, Math.max(0, BALANCE.chipCeiling - Math.max(0, chips)));
+    v = Math.min(v, Math.max(0, chipCeilingFor() - Math.max(0, chips)));
   }
   return v;
 }
@@ -130,11 +161,13 @@ function capWin(net, chips) {
 // 1:1 실시간 대결 전용 상한 (사람 대 사람).
 // 두 클라이언트가 반드시 같은 값을 계산해야 결과가 어긋나지 않으므로,
 // 한쪽에만 켜져 있을 수 있는 우대 여부는 보지 않는다. 스택은 양쪽이 모두 아는 값이다.
-function capWinPvp(net, stack) {
+// 천장은 그 칩의 주인(pid)으로 계산한다. 양쪽 모두 두 사람의 아이디를 알고
+// 해시가 같으므로, 내 화면과 상대 화면이 같은 값을 얻는다.
+function capWinPvp(net, stack, pid) {
   if (net <= 0) return net;
   let v = Math.min(net, BALANCE.pvpMaxWin);
   if (typeof stack === 'number' && isFinite(stack)) {
-    v = Math.min(v, Math.max(0, BALANCE.chipCeiling - Math.max(0, stack)));
+    v = Math.min(v, Math.max(0, chipCeilingForPid(pid) - Math.max(0, stack)));
   }
   return v;
 }
