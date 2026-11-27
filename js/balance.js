@@ -19,10 +19,14 @@ const BALANCE = {
   scaleBelow: 1200,      // 목표보다 이만큼 모자라면(=1,500) 끌어올리는 힘이 최대
   scaleAbove: 1200,      // 목표보다 이만큼 넘치면(=3,900) 끌어내리는 힘이 최대
   // 한 번 크게 벌었던 계정은 구제를 아예 없앤다 → 내려갈 때 파산까지 갈 수 있다
-  richPeak: 4300,        // 이번 세션 최고 보유가 이 값을 넘으면 (크게 벌어본 사람)
-                         // 범위 상한(3,900)·조임 구간(4,000) 바로 위다. 한 번
-                         // 조임 구간까지 올라가 본 사람은 그 뒤로 구제가 사라진다.
+  richPeak: 5400,        // 이번 세션 최고 보유가 이 값을 넘으면 (크게 벌어본 사람)
+                         // 범위 상한(3,900)·조임 구간(4,000)보다 위다. 한 번 크게
+                         // 벌어본 사람은 그 뒤로 구제가 거의 사라진다.
   richDrawsBelow: 1,     // 목표 아래에서도 구제 없음. 하우스 엣지에 그대로 노출되어 파산까지 갈 수 있다
+  // 단, 크게 벌어본 사람도 바닥(lowRescueFrom) 아래로 내려오면 약하게는 구제한다.
+  // 바로 파산하지 않고 한참 버티게 하려는 장치이며, 달성 전(maxDrawsBelow 5회)보다 약하다.
+  lowRescueFrom: 1000,   // 보유 칩이 이 값 이하일 때만
+  richLowDraws: 2,       // 최대 추첨 횟수 2회 (일반 구제 5회보다 약함)
   // [총 베팅 하한, 이 배율 이상 금지]  (베팅 100 미만은 제한 없음)
   payoutCaps: [
     [500, 9], [470, 10], [400, 12], [320, 15], [230, 20],
@@ -79,8 +83,12 @@ function balancePlan(chips) {
   if (Math.abs(gap) <= BALANCE.deadZone) return { mode: 'best', k: 1 };
 
   if (gap < 0) {
-    // 크게 벌었던 적이 있으면 구제가 약해진다
-    const maxBelow = balancePeak() >= BALANCE.richPeak ? BALANCE.richDrawsBelow : BALANCE.maxDrawsBelow;
+    // 크게 벌었던 적이 있으면 구제가 약해진다.
+    // 그래도 바닥(lowRescueFrom) 아래에서는 약하게 구제해 바로 파산하지는 않게 한다.
+    let maxBelow = BALANCE.maxDrawsBelow;
+    if (balancePeak() >= BALANCE.richPeak) {
+      maxBelow = c <= BALANCE.lowRescueFrom ? BALANCE.richLowDraws : BALANCE.richDrawsBelow;
+    }
     const s = Math.min(1, (-gap - BALANCE.deadZone) / BALANCE.scaleBelow);
     return { mode: 'best', k: 1 + Math.round(s * (maxBelow - 1)) };
   }
